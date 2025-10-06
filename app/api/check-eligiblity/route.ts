@@ -21,12 +21,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Bugünün başlangıç zamanı
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const todayTimestamp = Math.floor(today.getTime() / 1000)
 
-    // Neynar API'den kullanıcının cast'lerini çek
     const neynarResponse = await fetch(
       `https://api.neynar.com/v2/farcaster/feed/user/fid/${fid}/casts?limit=50`,
       {
@@ -38,16 +36,15 @@ export async function POST(request: NextRequest) {
 
     if (!neynarResponse.ok) {
       console.error('Neynar API error:', await neynarResponse.text())
-      return NextResponse.json(
-        { eligible: false, reason: 'Failed to fetch casts' },
-        { status: 500 }
-      )
+      return NextResponse.json({
+        eligible: true,
+        message: 'API error - allowing claim'
+      })
     }
 
     const data = await neynarResponse.json()
     const casts = data.casts || []
 
-    // Bugün #gmBase içeren cast var mı?
     const hasGmBaseToday = casts.some((cast: any) => {
       const castTimestamp = new Date(cast.timestamp).getTime() / 1000
       const castText = cast.text?.toLowerCase() || ''
@@ -72,9 +69,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Eligibility check error:', error)
-    return NextResponse.json(
-      { eligible: false, reason: 'Server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      eligible: true,
+      message: 'Error - allowing claim'
+    })
   }
 }

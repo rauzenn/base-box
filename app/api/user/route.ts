@@ -1,84 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getUser } from '@/lib/kv'
+
+const BADGE_MAP: { [key: number]: { name: string; emoji: string; description: string } } = {
+  1: { name: 'First GM', emoji: '🌅', description: 'Posted your first #gmBase' },
+  2: { name: 'Stay Based', emoji: '🔥', description: 'Maintained a 7-day streak' },
+  3: { name: 'Based OG', emoji: '👑', description: 'Achieved a 30-day streak' },
+  4: { name: 'Eternal Baser', emoji: '💎', description: 'Legendary 100-day streak' },
+}
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const fid = searchParams.get('fid')
+    const fidParam = searchParams.get('fid')
 
-    if (!fid) {
+    if (!fidParam) {
       return NextResponse.json(
         { error: 'Missing FID' },
         { status: 400 }
       )
     }
 
-    // Kullanıcı verilerini al
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('fid', fid)
-      .single()
+    const fid = parseInt(fidParam)
+    const user = await getUser(fid)
 
-    if (userError && userError.code !== 'PGRST116') {
-      console.error('User fetch error:', userError)
-      return NextResponse.json(
-        { error: 'Database error' },
-        { status: 500 }
-      )
-    }
-
-    // Kullanıcı yoksa boş veri dön
     if (!user) {
       return NextResponse.json({
         fid,
         streak: 0,
+        maxStreak: 0,
         hasClaimedToday: false,
         badges: [],
         rank: null,
-        totalClaims: 0
+        totalClaims: 0,
+        referralCount: 0
       })
     }
 
-    // Bugün claim edilmiş mi?
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const todayStr = today.toISOString().split('T')[0]
-    const hasClaimedToday = user.last_claim_date === todayStr
+    const hasClaimedToday = user.lastClaimDate === todayStr
 
-    // Kullanıcının badge'lerini al
-    const { data: userBadges } = await supabase
-      .from('user_badges')
-      .select(`
-        badge_id,
-        badges (
-          id,
-          name,
-          emoji,
-          description
-        )
-      `)
-      .eq('user_id', user.id)
-
-    const badges = userBadges?.map((ub: any) => ub.badges) || []
-
-    // Leaderboard sıralamasını hesapla
-    const { count } = await supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .gt('current_streak', user.current_streak)
-
-    const rank = count !== null ? count + 1 : null
+    const badges = user.badges.map(badgeId => BADGE_MAP[badgeId]).filter(Boolean)
 
     return NextResponse.json({
       fid: user.fid,
-      streak: user.current_streak,
-      maxStreak: user.max_streak,
+      streak: user.currentStreak,
+      maxStreak: user.maxStreak,
       hasClaimedToday,
       badges,
-      rank,
-      totalClaims: user.total_claims,
-      referralCount: user.referral_count
+      rank: null,
+      totalClaims: user.totalClaims,
+      referralCount: user.referralCount
     })
 
   } catch (error) {

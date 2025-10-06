@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getUser, updateUserStreak } from '/Users/han/Desktop/based-streaks/.next/build/lib/kv.ts'
 
 interface BadgeTier {
   streak: number
@@ -30,50 +30,11 @@ export async function POST(request: NextRequest) {
     today.setHours(0, 0, 0, 0)
     const todayStr = today.toISOString().split('T')[0]
 
-    // Kullanıcıyı database'den al veya oluştur
-    let { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('fid', fid)
-      .single()
-
-    if (userError && userError.code !== 'PGRST116') {
-      console.error('User fetch error:', userError)
-      return NextResponse.json(
-        { success: false, error: 'Database error' },
-        { status: 500 }
-      )
-    }
-
-    // Kullanıcı yoksa oluştur
-    if (!user) {
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert([
-          {
-            fid,
-            current_streak: 0,
-            max_streak: 0,
-            total_claims: 0,
-            referral_count: 0,
-          },
-        ])
-        .select()
-        .single()
-
-      if (createError) {
-        console.error('User creation error:', createError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to create user' },
-          { status: 500 }
-        )
-      }
-
-      user = newUser
-    }
+    // Kullanıcıyı KV'den al
+    const user = await getUser(fid)
 
     // Bugün zaten claim edilmiş mi?
-    if (user.last_claim_date === todayStr) {
+    if (user && user.lastClaimDate === todayStr) {
       return NextResponse.json({
         success: false,
         error: 'Already claimed today!'
@@ -82,66 +43,28 @@ export async function POST(request: NextRequest) {
 
     // Streak hesapla
     let newStreak = 1
-    if (user.last_claim_date) {
+    if (user && user.lastClaimDate) {
       const yesterday = new Date(today)
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = yesterday.toISOString().split('T')[0]
 
-      if (user.last_claim_date === yesterdayStr) {
-        newStreak = user.current_streak + 1
+      // Dün claim edilmişse streak devam ediyor
+      if (user.lastClaimDate === yesterdayStr) {
+        newStreak = user.currentStreak + 1
       }
     }
-
-    const maxStreak = Math.max(newStreak, user.max_streak)
-
-    // Kullanıcıyı güncelle
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        current_streak: newStreak,
-        max_streak: maxStreak,
-        last_claim_date: todayStr,
-        total_claims: user.total_claims + 1,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('fid', fid)
-
-    if (updateError) {
-      console.error('User update error:', updateError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to update streak' },
-        { status: 500 }
-      )
-    }
-
-    // Claim history'ye ekle
-    await supabase.from('claims').insert([
-      {
-        user_id: user.id,
-        fid,
-        streak_count: newStreak,
-      },
-    ])
 
     // Yeni badge kazanıldı mı?
     let newBadge = null
     const earnedBadge = BADGE_TIERS.find((tier) => tier.streak === newStreak)
+    const badgeId = earnedBadge ? earnedBadge.id : undefined
 
     if (earnedBadge) {
-      // Badge'i user_badges tablosuna ekle
-      const { error: badgeError } = await supabase
-        .from('user_badges')
-        .insert([
-          {
-            user_id: user.id,
-            badge_id: earnedBadge.id,
-          },
-        ])
-
-      if (!badgeError) {
-        newBadge = earnedBadge
-      }
+      newBadge = earnedBadge
     }
+
+    // KV'ye kaydet
+    await updateUserStreak(fid, newStreak, badgeId)
 
     return NextResponse.json({
       success: true,
