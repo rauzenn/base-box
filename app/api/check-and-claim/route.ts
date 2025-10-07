@@ -1,77 +1,129 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server';
+import {
+  hasClaimed,
+  markDayClaimed,
+  getUserParticipation,
+  createParticipation,
+  updateUserStreak,
+  addToLeaderboard,
+  grantBadge
+} from '@/lib/kv';
+import { getCurrentDayIndex } from '@/lib/season';
+import { verifyDailyCast } from '@/lib/farcaster';
 
-export async function POST(request: NextRequest) {
+export const dynamic = 'force-dynamic';
+
+const BADGE_MILESTONES = [7, 14, 21, 30];
+const BASE_POINTS = 10;
+
+export async function POST(request: Request) {
   try {
-    const { fid } = await request.json()
+    const body = await request.json();
+    const { fid, seasonId = 'season_1' } = body;
 
     if (!fid) {
       return NextResponse.json(
-        { eligible: false, reason: 'Missing FID' },
+        { ok: false, error: 'Missing fid' },
         { status: 400 }
-      )
+      );
     }
 
-    const neynarApiKey = process.env.NEYNAR_API_KEY
+    const fidNum = parseInt(fid);
+    const dayIdx = getCurrentDayIndex(seasonId);
 
-    if (!neynarApiKey || neynarApiKey === 'demo') {
-      // Demo mode - her zaman eligible dön
+    // Check if already claimed today
+    const alreadyClaimed = await hasClaimed(fidNum, seasonId, dayIdx);
+    if (alreadyClaimed) {
       return NextResponse.json({
-        eligible: true,
-        message: 'Demo mode: Always eligible'
-      })
+        ok: false,
+        error: 'Already claimed today'
+      });
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayTimestamp = Math.floor(today.getTime() / 1000)
+    // Verify cast with #gmBase
+    const castVerification = await verifyDailyCast(fidNum, seasonId, dayIdx);
+    
+    if (!castVerification.ok) {
+      return NextResponse.json({
+        ok: false,
+        error: castVerification.error || 'No qualifying cast found'
+      });
+    }
 
-    const neynarResponse = await fetch(
-      `https://api.neynar.com/v2/farcaster/feed/user/fid/${fid}/casts?limit=50`,
-      {
-        headers: {
-          'api_key': neynarApiKey,
-        },
+    // Get or create participation
+    let participation = await getUserParticipation(fidNum, seasonId);
+    
+    if (!participation) {
+      participation = {
+        seasonId,
+        fid: fidNum,
+        totalXp: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        firstSuccessDayIdx: dayIdx,
+        lastClaimedDayIdx: null,
+        badges: []
+      };
+      await createParticipation(participation);
+    }
+
+    // Check if streak should continue or reset
+    const lastDay = participation.lastClaimedDayIdx;
+    let newStreak = participation.currentStreak;
+    
+    if (lastDay === null) {
+      // First claim ever
+      newStreak = 1;
+    } else if (dayIdx === lastDay + 1) {
+      // Consecutive day
+      newStreak = participation.currentStreak + 1;
+    } else if (dayIdx > lastDay + 1) {
+      // Streak broken, reset
+      newStreak = 1;
+    }
+
+    const newTotalXp = participation.totalXp + BASE_POINTS;
+    const newLongestStreak = Math.max(newStreak, participation.longestStreak);
+
+    // Mark day as claimed
+    await markDayClaimed(fidNum, seasonId, dayIdx, castVerification.castHash!);
+
+    // Update participation
+    await updateUserStreak(fidNum, seasonId, {
+      totalXp: newTotalXp,
+      currentStreak: newStreak,
+      longestStreak: newLongestStreak,
+      lastClaimedDayIdx: dayIdx
+    });
+
+    // Update leaderboard
+    await addToLeaderboard(seasonId, fidNum, newTotalXp);
+
+    // Check for badge milestones
+    const grantedBadges: number[] = [];
+    for (const milestone of BADGE_MILESTONES) {
+      if (
+        newStreak === milestone &&
+        !participation.badges.includes(milestone)
+      ) {
+        await grantBadge(fidNum, seasonId, milestone);
+        grantedBadges.push(milestone);
       }
-    )
-
-    if (!neynarResponse.ok) {
-      console.error('Neynar API error:', await neynarResponse.text())
-      return NextResponse.json({
-        eligible: true,
-        message: 'API error - allowing claim'
-      })
     }
 
-    const data = await neynarResponse.json()
-    const casts = data.casts || []
-
-    const hasGmBaseToday = casts.some((cast: any) => {
-      const castTimestamp = new Date(cast.timestamp).getTime() / 1000
-      const castText = cast.text?.toLowerCase() || ''
-      
-      return (
-        castTimestamp >= todayTimestamp &&
-        (castText.includes('#gmbase') || castText.includes('gmbase'))
-      )
-    })
-
-    if (hasGmBaseToday) {
-      return NextResponse.json({
-        eligible: true,
-        message: 'Great! You posted #gmBase today'
-      })
-    } else {
-      return NextResponse.json({
-        eligible: false,
-        reason: 'No #gmBase cast found today. Post one first!'
-      })
-    }
-
-  } catch (error) {
-    console.error('Eligibility check error:', error)
     return NextResponse.json({
-      eligible: true,
-      message: 'Error - allowing claim'
-    })
+      ok: true,
+      points: BASE_POINTS,
+      currentStreak: newStreak,
+      totalXp: newTotalXp,
+      grantedBadges,
+      message: `Day ${newStreak} streak! Keep going! 🔥`
+    });
+  } catch (error) {
+    console.error('POST /api/check-and-claim error:', error);
+    return NextResponse.json(
+      { ok: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

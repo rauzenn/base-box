@@ -1,64 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getUser } from '@/lib/kv'
+import { NextResponse } from 'next/server';
+import { getUser, getUserParticipation, getUserRank } from '@/lib/kv';
 
-const BADGE_MAP: { [key: number]: { name: string; emoji: string; description: string } } = {
-  1: { name: 'First GM', emoji: '🌅', description: 'Posted your first #gmBase' },
-  2: { name: 'Stay Based', emoji: '🔥', description: 'Maintained a 7-day streak' },
-  3: { name: 'Based OG', emoji: '👑', description: 'Achieved a 30-day streak' },
-  4: { name: 'Eternal Baser', emoji: '💎', description: 'Legendary 100-day streak' },
-}
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const fidParam = searchParams.get('fid')
+    const { searchParams } = new URL(request.url);
+    const fid = searchParams.get('fid');
+    const seasonId = searchParams.get('seasonId') || 'season_1';
 
-    if (!fidParam) {
+    if (!fid) {
       return NextResponse.json(
-        { error: 'Missing FID' },
+        { ok: false, error: 'Missing fid parameter' },
         { status: 400 }
-      )
+      );
     }
 
-    const fid = parseInt(fidParam)
-    const user = await getUser(fid)
-
+    const fidNum = parseInt(fid);
+    
+    // Get user data
+    const user = await getUser(fidNum);
+    
     if (!user) {
-      return NextResponse.json({
-        fid,
-        streak: 0,
-        maxStreak: 0,
-        hasClaimedToday: false,
-        badges: [],
-        rank: null,
-        totalClaims: 0,
-        referralCount: 0
-      })
+      return NextResponse.json(
+        { ok: false, error: 'User not found' },
+        { status: 404 }
+      );
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayStr = today.toISOString().split('T')[0]
-    const hasClaimedToday = user.lastClaimDate === todayStr
-
-    const badges = user.badges.map(badgeId => BADGE_MAP[badgeId]).filter(Boolean)
+    // Get participation data
+    const participation = await getUserParticipation(fidNum, seasonId);
+    
+    // Get rank
+    const rank = await getUserRank(seasonId, fidNum);
 
     return NextResponse.json({
-      fid: user.fid,
-      streak: user.currentStreak,
-      maxStreak: user.maxStreak,
-      hasClaimedToday,
-      badges,
-      rank: null,
-      totalClaims: user.totalClaims,
-      referralCount: user.referralCount
-    })
-
+      ok: true,
+      user: {
+        fid: user.fid,
+        displayName: user.displayName,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+        walletAddress: user.walletAddress
+      },
+      currentSeason: {
+        id: seasonId,
+        totalXp: participation?.totalXp || 0,
+        currentStreak: participation?.currentStreak || 0,
+        longestStreak: participation?.longestStreak || 0,
+        badges: participation?.badges || [],
+        rank: rank || null
+      }
+    });
   } catch (error) {
-    console.error('User fetch error:', error)
+    console.error('GET /api/user error:', error);
     return NextResponse.json(
-      { error: 'Server error' },
+      { ok: false, error: 'Internal server error' },
       { status: 500 }
-    )
+    );
   }
 }
