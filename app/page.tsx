@@ -1,55 +1,51 @@
-'use client'
+import Link from 'next/link'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Flame, Zap } from 'lucide-react'
-
-export default function SplashScreen() {
-  const router = useRouter()
-
-  useEffect(() => {
-    // Direkt ana sayfaya yönlendir
-    const timer = setTimeout(() => {
-      router.push('/main')
-    }, 1500)
-
-    return () => clearTimeout(timer)
-  }, [router])
-
+export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 flex flex-col items-center justify-center p-6">
-      <div className="text-center mb-12 animate-fade-in">
-        <div className="relative">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Flame className="w-12 h-12 text-orange-400 animate-pulse" />
-            <h1 className="text-6xl font-black text-white tracking-tight">
-              BASED
-            </h1>
-            <Zap className="w-12 h-12 text-yellow-400 animate-pulse" />
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <div className="h-1 w-12 bg-orange-400 rounded"></div>
-            <h2 className="text-3xl font-bold text-blue-200 tracking-wider">
-              STREAKS
-            </h2>
-            <div className="h-1 w-12 bg-orange-400 rounded"></div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700">
+      <div className="text-center text-white px-8">
+        <div className="mb-8">
+          <span className="text-9xl">🔥</span>
         </div>
-        <p className="text-blue-100 text-lg mt-6 font-medium">
-          Build your streak. Earn badges. Stay Based.
+        
+        <h1 className="text-7xl font-bold mb-4 tracking-tight">
+          Based Streaks
+        </h1>
+        
+        <p className="text-2xl mb-8 text-blue-100 max-w-2xl mx-auto">
+          Daily #gmBase streak tracker on Base
         </p>
-      </div>
+        
+        <div className="space-y-4">
+          <p className="text-xl opacity-90">
+            Track your daily #gmBase casts
+          </p>
+          <p className="text-xl opacity-90">
+            Earn badges for consistency
+          </p>
+          <p className="text-xl opacity-90">
+            Compete on the leaderboard
+          </p>
+        </div>
 
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 border-4 border-blue-300 border-t-white rounded-full animate-spin"></div>
-        <p className="text-blue-100 text-sm animate-pulse">
-          Loading your Base journey...
-        </p>
-      </div>
+        <div className="mt-12 p-8 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 max-w-md mx-auto">
+          <p className="text-lg mb-4">
+            ✨ Open this in <strong>Farcaster</strong> to start!
+          </p>
+          <p className="text-sm opacity-80">
+            Or visit directly:
+          </p>
+          <Link 
+            href="/main"
+            className="inline-block mt-4 px-8 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-gray-100 transition-colors"
+          >
+            Launch App
+          </Link>
+        </div>
 
-      <div className="absolute bottom-8 text-center">
-        <p className="text-blue-300 text-xs">Powered by Base × Farcaster</p>
-        <p className="text-blue-400 text-xs mt-1">#gmBase every day anon</p>
+        <div className="mt-16 text-sm opacity-70">
+          <p>Built on Base · Powered by Farcaster</p>
+        </div>
       </div>
     </div>
   )
