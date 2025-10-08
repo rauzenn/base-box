@@ -34,7 +34,7 @@ export async function verifyDailyCast(
 
     // Fetch user's recent casts
     const response = await fetch(
-      `${NEYNAR_BASE_URL}/farcaster/casts?fid=${fid}&limit=25`,
+      `${NEYNAR_BASE_URL}/farcaster/feed/user/casts?fid=${fid}&limit=25&includeReplies=false`,
       {
         headers: {
           'accept': 'application/json',
