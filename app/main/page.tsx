@@ -1,70 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Flame, Trophy, Users, Zap, Calendar, Award } from 'lucide-react'
-
-interface FarcasterUser {
-  fid: number
-  username: string
-  displayName: string
-  pfpUrl: string
-}
-
-interface BadgeItem {
-  name: string
-  emoji: string
-  id: number
-}
 
 export default function MainApp() {
-  const [user, setUser] = useState<FarcasterUser | null>(null)
-  const [streak, setStreak] = useState<number>(0)
-  const [hasClaimedToday, setHasClaimedToday] = useState<boolean>(false)
-  const [badges, setBadges] = useState<BadgeItem[]>([])
-  const [loading, setLoading] = useState<boolean>(false)
-
-  useEffect(() => {
-  const loadUserData = async () => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('farcaster_user')
-      let currentUser = null
-      
-      if (storedUser) {
-        const userData = JSON.parse(storedUser)
-        currentUser = userData.user
-      } else {
-        currentUser = {
-          fid: 12345,
-          username: 'basedanon',
-          displayName: 'Based Anon',
-          pfpUrl: 'https://i.imgur.com/example.png'
-        }
-      }
-      
-      setUser(currentUser)
-
-      // Database'den kullanıcı verilerini çek
-      try {
-        const response = await fetch(`/api/user?fid=${currentUser.fid}`)
-        const data = await response.json()
-        
-        if (data && !data.error) {
-          setStreak(data.streak || 0)
-          setHasClaimedToday(data.hasClaimedToday || false)
-          setBadges(data.badges || [])
-        }
-      } catch (error) {
-        console.error('Failed to load user data:', error)
-      }
-    }
+  const [loading, setLoading] = useState(false)
+  const [streak, setStreak] = useState(0)
+  const [totalXp, setTotalXp] = useState(0)
+  const [badges, setBadges] = useState<number[]>([])
+  const [message, setMessage] = useState('')
+  
+  // TODO: Get from Farcaster auth
+  const user = {
+    fid: 12345,
+    displayName: 'Based Anon',
+    username: 'basedanon'
   }
-
-  loadUserData()
-}, [])
 
   const checkAndClaim = async () => {
     if (!user) {
@@ -73,180 +24,140 @@ export default function MainApp() {
     }
 
     setLoading(true)
-    
+    setMessage('')
+
     try {
-      const eligibilityResponse = await fetch('/api/check-eligibility', {
+      const response = await fetch('/api/check-and-claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fid: user.fid })
+        body: JSON.stringify({ fid: user.fid, seasonId: 'season_1' })
       })
 
-      const eligibilityData = await eligibilityResponse.json()
+      const data = await response.json()
 
-      if (!eligibilityData.eligible) {
-        alert(eligibilityData.reason || 'You need to post #gmBase today first!')
-        setLoading(false)
-        return
-      }
-
-      const claimResponse = await fetch('/api/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fid: user.fid })
-      })
-
-      const claimData = await claimResponse.json()
-
-      if (claimData.success) {
-        setStreak(claimData.newStreak)
-        setHasClaimedToday(true)
-        
-        if (claimData.newBadge) {
-          setBadges((prev: BadgeItem[]) => [...prev, claimData.newBadge])
-          alert(`🎉 New Badge Unlocked: ${claimData.newBadge.name}`)
-        } else {
-          alert(`✅ Streak Claimed! Current streak: ${claimData.newStreak} days`)
+      if (data.ok) {
+        setStreak(data.currentStreak)
+        setTotalXp(data.totalXp)
+        if (data.grantedBadges?.length > 0) {
+          setBadges([...badges, ...data.grantedBadges])
         }
+        setMessage(data.message || 'Claimed successfully! 🔥')
       } else {
-        alert(claimData.error || 'Claim failed!')
+        setMessage(data.error || 'Failed to claim')
       }
     } catch (error) {
       console.error('Claim error:', error)
-      alert('Something went wrong. Try again!')
+      setMessage('Something went wrong. Try again!')
     } finally {
       setLoading(false)
     }
   }
 
-  const getStreakEmoji = (streakCount: number): string => {
-    if (streakCount >= 100) return '💎'
-    if (streakCount >= 30) return '👑'
-    if (streakCount >= 7) return '🔥'
-    return '🌅'
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 border-2 border-blue-500">
-              <AvatarImage src={user?.pfpUrl} />
-              <AvatarFallback>
-                {user?.username?.[0]?.toUpperCase() || 'BA'}
-              </AvatarFallback>
-            </Avatar>
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+              {user.displayName[0]}
+            </div>
             <div>
-              <h2 className="font-bold text-lg">
-                {user?.displayName || 'Based Anon'}
-              </h2>
-              <p className="text-sm text-gray-600">
-                @{user?.username || 'demo'}
-              </p>
+              <h1 className="text-2xl font-bold text-gray-900">{user.displayName}</h1>
+              <p className="text-gray-600">@{user.username}</p>
+              <p className="text-sm text-gray-500">FID: {user.fid}</p>
             </div>
           </div>
-          {user && (
-            <Badge variant="secondary" className="text-xs">
-              FID: {user.fid}
-            </Badge>
+        </div>
+
+        {/* Streak Card */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">🔥</span>
+            <h2 className="text-2xl font-bold text-gray-900">Your Streak</h2>
+          </div>
+          <p className="text-gray-600 mb-6">Keep the fire burning!</p>
+          
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <span className="text-6xl">🌅</span>
+            <span className="text-8xl font-bold text-blue-600">{streak}</span>
+          </div>
+          
+          <p className="text-center text-gray-600 mb-6">
+            {streak === 0 ? 'Start your journey!' : `${streak} day streak! Keep going!`}
+          </p>
+
+          <Button
+            onClick={checkAndClaim}
+            disabled={loading}
+            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin">⚡</span>
+                Checking...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <span>⚡</span>
+                Check & Claim
+              </span>
+            )}
+          </Button>
+
+          {message && (
+            <div className={`mt-4 p-4 rounded-lg ${
+              message.includes('successfully') || message.includes('streak')
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              <p className="text-center font-medium">{message}</p>
+            </div>
           )}
         </div>
 
-        <Card className="mb-6 border-2 border-blue-200 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Flame className="w-6 h-6 text-orange-500" />
-              Your Streak
-            </CardTitle>
-            <CardDescription>Keep the fire burning!</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-6">
-              <div className="text-7xl font-black text-blue-600 mb-2">
-                {getStreakEmoji(streak)} {streak}
-              </div>
-              <p className="text-gray-600 font-medium">
-                {streak === 0 ? 'Start your journey!' : `${streak} day${streak !== 1 ? 's' : ''} strong`}
-              </p>
+        {/* Badges */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">🏆</span>
+            <h2 className="text-2xl font-bold text-gray-900">Your Badges ({badges.length})</h2>
+          </div>
+          
+          {badges.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">
+              Start your streak to earn badges!
+            </p>
+          ) : (
+            <div className="grid grid-cols-4 gap-4">
+              {badges.map((badge) => (
+                <div key={badge} className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border-2 border-yellow-200">
+                  <span className="text-4xl">🏅</span>
+                  <span className="text-sm font-bold text-gray-700">{badge} Days</span>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
 
-            <Button 
-              onClick={checkAndClaim}
-              disabled={hasClaimedToday || loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-6 text-lg"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Checking...
-                </span>
-              ) : hasClaimedToday ? (
-                '✅ Claimed Today!'
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  Check & Claim
-                </span>
-              )}
-            </Button>
-
-            {hasClaimedToday && (
-              <p className="text-center text-sm text-gray-500 mt-3">
-                Come back tomorrow for another streak!
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-yellow-500" />
-              Your Badges ({badges.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {badges.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">
-                Start your streak to earn badges!
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 gap-4">
-                {badges.map((badge: BadgeItem, idx: number) => (
-                  <div key={idx} className="text-center">
-                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-3xl shadow-lg">
-                      {badge.emoji}
-                    </div>
-                    <p className="text-xs mt-2 font-medium">{badge.name}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-3 gap-3">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <Calendar className="w-6 h-6 mx-auto mb-2 text-blue-600" />
-              <p className="text-2xl font-bold">{streak}</p>
-              <p className="text-xs text-gray-600">Days</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <Award className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
-              <p className="text-2xl font-bold">{badges.length}</p>
-              <p className="text-xs text-gray-600">Badges</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <Users className="w-6 h-6 mx-auto mb-2 text-green-600" />
-              <p className="text-2xl font-bold">0</p>
-              <p className="text-xs text-gray-600">Referrals</p>
-            </CardContent>
-          </Card>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+            <span className="text-3xl mb-2 block">📅</span>
+            <p className="text-3xl font-bold text-gray-900">{streak}</p>
+            <p className="text-sm text-gray-600 mt-1">Days</p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+            <span className="text-3xl mb-2 block">🏅</span>
+            <p className="text-3xl font-bold text-gray-900">{badges.length}</p>
+            <p className="text-sm text-gray-600 mt-1">Badges</p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+            <span className="text-3xl mb-2 block">👥</span>
+            <p className="text-3xl font-bold text-gray-900">0</p>
+            <p className="text-sm text-gray-600 mt-1">Referrals</p>
+          </div>
         </div>
       </div>
     </div>
