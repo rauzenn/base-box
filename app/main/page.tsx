@@ -17,7 +17,7 @@ export default function MainApp() {
   useEffect(() => {
     const load = async () => {
       try {
-        setContext(sdk.context)
+        setContext(await sdk.context)
         setIsSDKLoaded(true)
       } catch (error) {
         console.error('SDK init error:', error)
@@ -25,6 +25,7 @@ export default function MainApp() {
         setIsSDKLoaded(true)
       }
     }
+    
     load()
   }, [])
 
@@ -88,12 +89,13 @@ export default function MainApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
       <div className="max-w-2xl mx-auto">
+
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex items-center gap-4">
             {user.pfpUrl ? (
-              <img 
-                src={user.pfpUrl} 
+              <img
+                src={user.pfpUrl}
                 alt={user.displayName}
                 className="w-16 h-16 rounded-full"
               />
@@ -116,13 +118,14 @@ export default function MainApp() {
             <span className="text-3xl">🔥</span>
             <h2 className="text-2xl font-bold text-gray-900">Your Streak</h2>
           </div>
+
           <p className="text-gray-600 mb-6">Keep the fire burning!</p>
-          
+
           <div className="flex items-center justify-center gap-4 mb-8">
             <span className="text-6xl">🌅</span>
             <span className="text-8xl font-bold text-blue-600">{streak}</span>
           </div>
-          
+
           <p className="text-center text-gray-600 mb-6">
             {streak === 0 ? 'Start your journey!' : `${streak} day streak! Keep going!`}
           </p>
@@ -162,7 +165,7 @@ export default function MainApp() {
             <span className="text-3xl">🏆</span>
             <h2 className="text-2xl font-bold text-gray-900">Your Badges ({badges.length})</h2>
           </div>
-          
+
           {badges.length === 0 ? (
             <p className="text-center text-gray-500 py-8">
               Start your streak to earn badges!
@@ -182,23 +185,24 @@ export default function MainApp() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-            <span className="text-3xl mb-2 block">📅</span>
+            <span className="text-3xl mb-2 block">🔥</span>
             <p className="text-3xl font-bold text-gray-900">{streak}</p>
             <p className="text-sm text-gray-600 mt-1">Days</p>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-lg p-6 text-center">
             <span className="text-3xl mb-2 block">🏅</span>
             <p className="text-3xl font-bold text-gray-900">{badges.length}</p>
             <p className="text-sm text-gray-600 mt-1">Badges</p>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-            <span className="text-3xl mb-2 block">👥</span>
-            <p className="text-3xl font-bold text-gray-900">0</p>
+            <span className="text-3xl mb-2 block">⚡</span>
+            <p className="text-3xl font-bold text-gray-900">{totalXp}</p>
             <p className="text-sm text-gray-600 mt-1">Referrals</p>
           </div>
         </div>
+
       </div>
     </div>
   )

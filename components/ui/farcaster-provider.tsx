@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import sdk from '@farcaster/frame-sdk'
+import sdk from '@farcaster/miniapp-sdk'
 
 export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false)
@@ -9,9 +9,10 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initSDK = async () => {
       try {
-        await sdk.actions.ready()
+        const context = await sdk.context
         console.log('✅ Farcaster SDK initialized successfully')
-        console.log('📱 Context:', sdk.context)
+        console.log('📱 User:', context.user)
+        console.log('🆔 FID:', context.user?.fid)
         setIsSDKLoaded(true)
       } catch (error) {
         console.error('❌ SDK initialization error:', error)
