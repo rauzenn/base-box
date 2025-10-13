@@ -12,12 +12,13 @@ export default function MainApp() {
   const [totalXp, setTotalXp] = useState(0)
   const [badges, setBadges] = useState<number[]>([])
   const [message, setMessage] = useState('')
+  const [devMode, setDevMode] = useState(false)
+  const [inputFid, setInputFid] = useState('')
 
   // Initialize SDK and get user
   useEffect(() => {
     const init = async () => {
       try {
-        // Wait for SDK to be ready
         const context = await sdk.context
         console.log('✅ SDK Context:', context)
         
@@ -25,12 +26,14 @@ export default function MainApp() {
           console.log('👤 User found:', context.user)
           setUser(context.user)
         } else {
-          console.log('⚠️ No user in context')
+          console.log('⚠️ No user in context - enabling dev mode')
+          setDevMode(true)
         }
         
         setIsReady(true)
       } catch (error) {
         console.error('❌ SDK init error:', error)
+        setDevMode(true)
         setIsReady(true)
       }
     }
@@ -38,31 +41,25 @@ export default function MainApp() {
     init()
   }, [])
 
-  // Sign in with Farcaster
-  const signIn = async () => {
-    try {
-      setLoading(true)
-      
-      // Trigger Farcaster auth
-      await sdk.actions.openUrl('https://warpcast.com')
-      
-      // After auth, reload context
-      const context = await sdk.context
-      if (context.user) {
-        setUser(context.user)
-        setMessage('✅ Connected successfully!')
-      }
-    } catch (error) {
-      console.error('Sign in error:', error)
-      setMessage('Failed to connect')
-    } finally {
-      setLoading(false)
+  // Dev mode: manual FID entry
+  const connectDevMode = () => {
+    const fid = parseInt(inputFid)
+    if (fid && fid > 0) {
+      setUser({
+        fid,
+        displayName: `User ${fid}`,
+        username: `user${fid}`,
+        pfpUrl: undefined
+      })
+      setMessage('✅ Dev mode: FID set!')
+    } else {
+      setMessage('❌ Please enter a valid FID')
     }
   }
 
   const checkAndClaim = async () => {
     if (!user?.fid) {
-      setMessage('Please connect with Farcaster first!')
+      setMessage('Please connect first!')
       return
     }
 
@@ -107,30 +104,56 @@ export default function MainApp() {
     )
   }
 
-  // If no user, show connect screen
-  if (!user) {
+  // If no user and dev mode enabled
+  if (!user && devMode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
-          <div className="text-6xl mb-6">🔥</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Based Streaks</h1>
-          <p className="text-gray-600 mb-8">
-            Connect with Farcaster to start tracking your #gmBase streaks!
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-6xl mb-6 text-center">🔥</div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Based Streaks</h1>
+          <p className="text-sm text-amber-600 mb-6 text-center">
+            ⚠️ Development Mode
           </p>
           
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Enter Your Farcaster ID:
+            </label>
+            <input
+              type="number"
+              value={inputFid}
+              onChange={(e) => setInputFid(e.target.value)}
+              placeholder="e.g., 569760"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Find your FID on <a href="https://warpcast.com/~/settings" target="_blank" className="text-blue-600 underline">Warpcast Settings</a>
+            </p>
+          </div>
+          
           <Button
-            onClick={signIn}
-            disabled={loading}
+            onClick={connectDevMode}
+            disabled={!inputFid}
             className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg"
           >
-            {loading ? 'Connecting...' : '🔗 Connect with Farcaster'}
+            🚀 Start Tracking
           </Button>
 
           {message && (
-            <div className="mt-4 p-3 rounded-lg bg-blue-50 text-blue-700 text-sm">
+            <div className={`mt-4 p-3 rounded-lg text-sm ${
+              message.includes('✅') 
+                ? 'bg-green-50 text-green-700' 
+                : 'bg-red-50 text-red-700'
+            }`}>
               {message}
             </div>
           )}
+
+          <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <p className="text-xs text-amber-800">
+              <strong>Note:</strong> This is development mode. For production, the app needs proper Farcaster manifest signing.
+            </p>
+          </div>
         </div>
       </div>
     )
@@ -162,9 +185,11 @@ export default function MainApp() {
                 <p className="text-sm text-gray-500">FID: {user.fid}</p>
               </div>
             </div>
-            <div className="text-green-600 text-sm font-medium">
-              ✅ Connected
-            </div>
+            {devMode && (
+              <div className="text-amber-600 text-xs font-medium">
+                ⚠️ Dev Mode
+              </div>
+            )}
           </div>
         </div>
 
