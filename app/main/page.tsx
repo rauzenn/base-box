@@ -5,43 +5,64 @@ import sdk from '@farcaster/miniapp-sdk'
 import { Button } from '@/components/ui/button'
 
 export default function MainApp() {
-  const [isSDKLoaded, setIsSDKLoaded] = useState(false)
-  const [context, setContext] = useState<any>(null)
+  const [isReady, setIsReady] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [streak, setStreak] = useState(0)
   const [totalXp, setTotalXp] = useState(0)
   const [badges, setBadges] = useState<number[]>([])
   const [message, setMessage] = useState('')
 
-  // Initialize Farcaster Mini App SDK
+  // Initialize SDK and get user
   useEffect(() => {
-    const load = async () => {
+    const init = async () => {
       try {
-        setContext(await sdk.context)
-        setIsSDKLoaded(true)
+        // Wait for SDK to be ready
+        const context = await sdk.context
+        console.log('✅ SDK Context:', context)
+        
+        if (context.user) {
+          console.log('👤 User found:', context.user)
+          setUser(context.user)
+        } else {
+          console.log('⚠️ No user in context')
+        }
+        
+        setIsReady(true)
       } catch (error) {
-        console.error('SDK init error:', error)
-        // Fallback for development/testing
-        setIsSDKLoaded(true)
+        console.error('❌ SDK init error:', error)
+        setIsReady(true)
       }
     }
     
-    load()
+    init()
   }, [])
 
-  // Get user from SDK context or fallback
-  const user = context?.user || {
-    fid: 1234, // Fallback for testing
-    displayName: 'Based Anon',
-    username: 'basedanon',
-    pfpUrl: undefined
+  // Sign in with Farcaster
+  const signIn = async () => {
+    try {
+      setLoading(true)
+      
+      // Trigger Farcaster auth
+      await sdk.actions.openUrl('https://warpcast.com')
+      
+      // After auth, reload context
+      const context = await sdk.context
+      if (context.user) {
+        setUser(context.user)
+        setMessage('✅ Connected successfully!')
+      }
+    } catch (error) {
+      console.error('Sign in error:', error)
+      setMessage('Failed to connect')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const fid = user?.fid
-
   const checkAndClaim = async () => {
-    if (!fid) {
-      setMessage('Please open in Farcaster!')
+    if (!user?.fid) {
+      setMessage('Please connect with Farcaster first!')
       return
     }
 
@@ -52,7 +73,7 @@ export default function MainApp() {
       const response = await fetch('/api/check-and-claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fid, seasonId: 'season_1' })
+        body: JSON.stringify({ fid: user.fid, seasonId: 'season_1' })
       })
 
       const data = await response.json()
@@ -75,7 +96,7 @@ export default function MainApp() {
     }
   }
 
-  if (!isSDKLoaded) {
+  if (!isReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
@@ -86,28 +107,63 @@ export default function MainApp() {
     )
   }
 
+  // If no user, show connect screen
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+          <div className="text-6xl mb-6">🔥</div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Based Streaks</h1>
+          <p className="text-gray-600 mb-8">
+            Connect with Farcaster to start tracking your #gmBase streaks!
+          </p>
+          
+          <Button
+            onClick={signIn}
+            disabled={loading}
+            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg"
+          >
+            {loading ? 'Connecting...' : '🔗 Connect with Farcaster'}
+          </Button>
+
+          {message && (
+            <div className="mt-4 p-3 rounded-lg bg-blue-50 text-blue-700 text-sm">
+              {message}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Main app UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
       <div className="max-w-2xl mx-auto">
 
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex items-center gap-4">
-            {user.pfpUrl ? (
-              <img
-                src={user.pfpUrl}
-                alt={user.displayName}
-                className="w-16 h-16 rounded-full"
-              />
-            ) : (
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {user.displayName?.[0] || '?'}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {user.pfpUrl ? (
+                <img
+                  src={user.pfpUrl}
+                  alt={user.displayName}
+                  className="w-16 h-16 rounded-full"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                  {user.displayName?.[0] || '?'}
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{user.displayName}</h1>
+                <p className="text-gray-600">@{user.username}</p>
+                <p className="text-sm text-gray-500">FID: {user.fid}</p>
               </div>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{user.displayName}</h1>
-              <p className="text-gray-600">@{user.username}</p>
-              <p className="text-sm text-gray-500">FID: {user.fid}</p>
+            </div>
+            <div className="text-green-600 text-sm font-medium">
+              ✅ Connected
             </div>
           </div>
         </div>
@@ -199,7 +255,7 @@ export default function MainApp() {
           <div className="bg-white rounded-xl shadow-lg p-6 text-center">
             <span className="text-3xl mb-2 block">⚡</span>
             <p className="text-3xl font-bold text-gray-900">{totalXp}</p>
-            <p className="text-sm text-gray-600 mt-1">Referrals</p>
+            <p className="text-sm text-gray-600 mt-1">XP</p>
           </div>
         </div>
 
