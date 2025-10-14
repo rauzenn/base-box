@@ -10,7 +10,7 @@ export async function GET() {
     frame: {
       version: "1",
       name: "Based Streaks",
-      subtitle: "Daily gmBase streak tracker on Base",
+      subtitle: "Track your gmBase streaks",
       description: "Track your daily gmBase casts, earn badges for consistency, and compete on the leaderboard",
       iconUrl: `${process.env.NEXT_PUBLIC_APP_URL}/icon.png`,
       splashImageUrl: `${process.env.NEXT_PUBLIC_APP_URL}/splash.png`,
