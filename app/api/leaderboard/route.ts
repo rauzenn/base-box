@@ -1,45 +1,43 @@
-import { NextResponse } from 'next/server';
-import { getLeaderboard, getUserParticipation } from '@/lib/kv';
+import { NextRequest, NextResponse } from "next/server";
 
-// Force dynamic rendering for this API route
-export const dynamic = 'force-dynamic';
+// This will be imported from the same in-memory store
+// For now, we'll simulate it
+// TODO: Share state with check-and-claim API or use KV
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const seasonId = searchParams.get('seasonId') || 'season_1';
-    const limitParam = searchParams.get('limit') || '100';
-    const limit = Math.min(parseInt(limitParam), 1000);
+interface LeaderboardEntry {
+  fid: number;
+  username: string;
+  totalXP: number;
+  currentStreak: number;
+  badges: string[];
+}
 
-    // Get leaderboard from KV
-    const leaderboardData = await getLeaderboard(seasonId, limit);
+// Mock data for now - will be replaced with real data from KV
+const mockLeaderboard: LeaderboardEntry[] = [
+  { fid: 123456, username: "0xbee.eth", totalXP: 520, currentStreak: 30, badges: ["Crown"] },
+  { fid: 234567, username: "han.base", totalXP: 500, currentStreak: 28, badges: ["Diamond"] },
+  { fid: 345678, username: "basedguy", totalXP: 485, currentStreak: 25, badges: ["Diamond"] },
+  { fid: 456789, username: "bluebuild", totalXP: 470, currentStreak: 22, badges: ["Bee"] },
+  { fid: 567890, username: "seedling", totalXP: 450, currentStreak: 20, badges: ["Bee"] }
+];
 
-    // Enrich with participation data
-    const items = await Promise.all(
-      leaderboardData.map(async (entry, index) => {
-        const participation = await getUserParticipation(entry.fid, seasonId);
-        
-        return {
-          rank: index + 1,
-          fid: entry.fid,
-          totalXp: entry.xp,
-          currentStreak: participation?.currentStreak || 0,
-          longestStreak: participation?.longestStreak || 0,
-          badges: participation?.badges || []
-        };
-      })
-    );
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const limit = parseInt(searchParams.get("limit") || "10");
 
-    return NextResponse.json({
-      ok: true,
-      seasonId,
-      items
-    });
-  } catch (error) {
-    console.error('GET /api/leaderboard error:', error);
-    return NextResponse.json(
-      { ok: false, error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  // TODO: Fetch from KV and sort by totalXP
+  // For now, return mock data sorted by XP
+  const leaderboard = [...mockLeaderboard]
+    .sort((a, b) => b.totalXP - a.totalXP)
+    .slice(0, limit)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1
+    }));
+
+  return NextResponse.json({
+    leaderboard,
+    season: 1,
+    totalUsers: mockLeaderboard.length
+  });
 }

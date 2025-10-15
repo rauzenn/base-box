@@ -1,290 +1,349 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import sdk from '@farcaster/miniapp-sdk'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect } from "react";
+import { useFarcasterContext } from "@/components/ui/farcaster-provider";
+import { MissionCard } from "@/components/ui/mission-card";
+import { getAllMissions, type MissionDifficulty } from "@/lib/missions";
 
-export default function MainApp() {
-  const [isReady, setIsReady] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [streak, setStreak] = useState(0)
-  const [totalXp, setTotalXp] = useState(0)
-  const [badges, setBadges] = useState<number[]>([])
-  const [message, setMessage] = useState('')
-  const [devMode, setDevMode] = useState(false)
-  const [inputFid, setInputFid] = useState('')
+export default function MainPage() {
+  const { user, isLoading } = useFarcasterContext();
+  const [streak, setStreak] = useState(0);
+  const [maxStreak, setMaxStreak] = useState(0);
+  const [totalXP, setTotalXP] = useState(0);
+  const [devFID, setDevFID] = useState("");
+  const [showDevInput, setShowDevInput] = useState(true);
+  const [claiming, setClaiming] = useState(false);
+  const [selectedMission, setSelectedMission] = useState<MissionDifficulty>("medium");
+  const [showMissionSelector, setShowMissionSelector] = useState(false);
 
-  // Initialize SDK and get user
+  const currentFID = user?.fid || (devFID ? parseInt(devFID) : null);
+  const missions = getAllMissions();
+
+  // Fetch user stats
   useEffect(() => {
-    const init = async () => {
-      try {
-        const context = await sdk.context
-        console.log('✅ SDK Context:', context)
-        
-        if (context.user) {
-          console.log('👤 User found:', context.user)
-          setUser(context.user)
-        } else {
-          console.log('⚠️ No user in context - enabling dev mode')
-          setDevMode(true)
-        }
-        
-        setIsReady(true)
-      } catch (error) {
-        console.error('❌ SDK init error:', error)
-        setDevMode(true)
-        setIsReady(true)
-      }
-    }
+    if (!currentFID) return;
     
-    init()
-  }, [])
+    fetch(`/api/me?fid=${currentFID}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setStreak(data.currentStreak || 0);
+        setMaxStreak(data.maxStreak || 0);
+        setTotalXP(data.totalXP || 0);
+        setShowDevInput(false);
+      });
+  }, [currentFID]);
 
-  // Dev mode: manual FID entry
-  const connectDevMode = () => {
-    const fid = parseInt(inputFid)
-    if (fid && fid > 0) {
-      setUser({
-        fid,
-        displayName: `User ${fid}`,
-        username: `user${fid}`,
-        pfpUrl: undefined
-      })
-      setMessage('✅ Dev mode: FID set!')
-    } else {
-      setMessage('❌ Please enter a valid FID')
-    }
-  }
-
-  const checkAndClaim = async () => {
-    if (!user?.fid) {
-      setMessage('Please connect first!')
-      return
-    }
-
-    setLoading(true)
-    setMessage('')
-
+  const handleClaim = async () => {
+    if (!currentFID) return;
+    setClaiming(true);
+    
     try {
-      const response = await fetch('/api/check-and-claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fid: user.fid, seasonId: 'season_1' })
-      })
-
-      const data = await response.json()
-
-      if (data.ok) {
-        setStreak(data.currentStreak)
-        setTotalXp(data.totalXp)
-        if (data.grantedBadges?.length > 0) {
-          setBadges([...badges, ...data.grantedBadges])
-        }
-        setMessage(data.message || 'Claimed successfully! 🔥')
+      const res = await fetch("/api/check-and-claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          fid: currentFID,
+          missionType: selectedMission 
+        }),
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setStreak(data.currentStreak);
+        setMaxStreak(data.maxStreak);
+        setTotalXP(data.totalXP);
+        setShowMissionSelector(false);
       } else {
-        setMessage(data.error || 'Failed to claim')
+        alert(data.message || "Failed to claim");
       }
-    } catch (error) {
-      console.error('Claim error:', error)
-      setMessage('Something went wrong. Try again!')
+    } catch (err) {
+      alert("Error claiming streak");
     } finally {
-      setLoading(false)
+      setClaiming(false);
     }
-  }
+  };
 
-  if (!isReady) {
+  // Loading state
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
-          <div className="animate-spin text-6xl mb-4">🔥</div>
-          <p className="text-xl text-gray-600">Loading Mini App...</p>
-        </div>
+      <div className="min-h-screen bg-[#070A0E] flex items-center justify-center">
+        <div className="animate-pulse text-white text-2xl">Loading...</div>
       </div>
-    )
+    );
   }
 
-  // If no user and dev mode enabled
-  if (!user && devMode) {
+  // Dev mode input (only if no user after loading)
+  if (showDevInput && !user && !isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
-          <div className="text-6xl mb-6 text-center">🔥</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Based Streaks</h1>
-          <p className="text-sm text-amber-600 mb-6 text-center">
-            ⚠️ Development Mode
-          </p>
-          
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Enter Your Farcaster ID:
-            </label>
-            <input
-              type="number"
-              value={inputFid}
-              onChange={(e) => setInputFid(e.target.value)}
-              placeholder="e.g., 569760"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Find your FID on <a href="https://warpcast.com/~/settings" target="_blank" className="text-blue-600 underline">Warpcast Settings</a>
+      <div className="min-h-screen bg-gradient-to-br from-[#070A0E] via-[#0C101A] to-[#070A0E] flex items-center justify-center p-6">
+        <div className="bg-[#12161E] rounded-3xl p-12 max-w-md w-full border border-[#FF6B35]/20 shadow-2xl">
+          <h1 className="text-4xl font-bold text-white mb-4 text-center">
+            🔥 Based Streaks
+          </h1>
+          <div className="bg-[#FFB800]/10 border border-[#FFB800] rounded-xl p-4 mb-6">
+            <p className="text-[#FFB800] text-sm text-center">
+              ⚠️ Development Mode Only
+            </p>
+            <p className="text-gray-400 text-xs text-center mt-2">
+              In production, users will be automatically authenticated via Farcaster
             </p>
           </div>
-          
-          <Button
-            onClick={connectDevMode}
-            disabled={!inputFid}
-            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg"
+          <input
+            type="number"
+            placeholder="Enter your FID for testing"
+            value={devFID}
+            onChange={(e) => setDevFID(e.target.value)}
+            className="w-full px-6 py-4 bg-[#070A0E] text-white rounded-xl border border-[#FF6B35] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] mb-4 text-lg"
+          />
+          <button
+            onClick={() => {
+              if (devFID) {
+                setShowDevInput(false);
+                localStorage.setItem('dev_fid', devFID); // Save for refresh
+              }
+            }}
+            className="w-full py-4 bg-gradient-to-r from-[#FF6B35] to-[#FFB800] text-white font-bold rounded-xl hover:scale-105 transition-transform text-lg shadow-lg hover:shadow-[#FF6B35]/50"
           >
-            🚀 Start Tracking
-          </Button>
-
-          {message && (
-            <div className={`mt-4 p-3 rounded-lg text-sm ${
-              message.includes('✅') 
-                ? 'bg-green-50 text-green-700' 
-                : 'bg-red-50 text-red-700'
-            }`}>
-              {message}
-            </div>
-          )}
-
-          <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-            <p className="text-xs text-amber-800">
-              <strong>Note:</strong> This is development mode. For production, the app needs proper Farcaster manifest signing.
-            </p>
+            Enter Dev Mode
+          </button>
+          
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => {
+                // Auto-fill with test FID
+                setDevFID("569760");
+              }}
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Use test FID (569760)
+            </button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  // Main app UI
+  // Main UI
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-[#070A0E] via-[#0C101A] to-[#070A0E]">
+      {/* Header */}
+      <header className="bg-[#070A0E] border-b border-[#FF6B35]/20">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            🔥 <span className="bg-gradient-to-r from-[#FF6B35] to-[#FFB800] bg-clip-text text-transparent">Based Streaks</span>
+          </h1>
+          <div className="text-sm text-gray-400">
+            FID: {currentFID}
+          </div>
+        </div>
+      </header>
 
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {user.pfpUrl ? (
-                <img
-                  src={user.pfpUrl}
-                  alt={user.displayName}
-                  className="w-16 h-16 rounded-full"
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-12">
+        
+        {/* HERO FLAME CARD */}
+        <div className="relative bg-gradient-to-br from-[#12161E] to-[#070A0E] rounded-3xl p-12 mb-8 border border-[#FF6B35]/30 shadow-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-radial from-[#FF6B35]/20 via-transparent to-transparent animate-pulse" />
+          
+          <div className="relative z-10">
+            {/* Living Flame Visualization */}
+            <div className="flex flex-col items-center mb-8">
+              <div className="relative">
+                <div className="absolute inset-0 blur-3xl bg-gradient-to-t from-[#FF6B35] via-[#FFB800] to-[#FFDC64] opacity-40 animate-pulse" />
+                
+                <div className="relative text-center">
+                  <div className="text-9xl mb-4 animate-bounce" style={{ animationDuration: "2s" }}>
+                    🔥
+                  </div>
+                  
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-8xl font-black text-white drop-shadow-2xl">
+                      {streak}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <h2 className="text-4xl font-bold text-white mt-8 mb-2">
+                Day {streak}
+              </h2>
+              <p className="text-gray-400 text-xl">
+                Keep the flame alive!
+              </p>
+            </div>
+
+            {/* Stats Row */}
+            <div className="flex justify-center gap-8 mb-8">
+              <div className="text-center">
+                <div className="text-gray-400 text-sm mb-1">Current Streak</div>
+                <div className="text-3xl font-bold text-[#FFB800]">{streak}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-gray-400 text-sm mb-1">Max Streak</div>
+                <div className="text-3xl font-bold text-[#00D395]">{maxStreak}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-gray-400 text-sm mb-1">Total XP</div>
+                <div className="text-3xl font-bold text-[#0052FF]">{totalXP}</div>
+              </div>
+            </div>
+
+            {/* Progress to next milestone */}
+            <div className="mb-8">
+              <div className="flex justify-between text-sm text-gray-400 mb-2">
+                <span>Progress to 30 days</span>
+                <span>{streak}/30</span>
+              </div>
+              <div className="h-3 bg-[#070A0E] rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-[#FF6B35] to-[#FFB800] transition-all duration-500 rounded-full"
+                  style={{ width: `${(streak / 30) * 100}%` }}
                 />
-              ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                  {user.displayName?.[0] || '?'}
-                </div>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{user.displayName}</h1>
-                <p className="text-gray-600">@{user.username}</p>
-                <p className="text-sm text-gray-500">FID: {user.fid}</p>
               </div>
             </div>
-            {devMode && (
-              <div className="text-amber-600 text-xs font-medium">
-                ⚠️ Dev Mode
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Streak Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-3xl">🔥</span>
-            <h2 className="text-2xl font-bold text-gray-900">Your Streak</h2>
-          </div>
-
-          <p className="text-gray-600 mb-6">Keep the fire burning!</p>
-
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <span className="text-6xl">🌅</span>
-            <span className="text-8xl font-bold text-blue-600">{streak}</span>
-          </div>
-
-          <p className="text-center text-gray-600 mb-6">
-            {streak === 0 ? 'Start your journey!' : `${streak} day streak! Keep going!`}
-          </p>
-
-          <Button
-            onClick={checkAndClaim}
-            disabled={loading}
-            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="animate-spin">⚡</span>
-                Checking...
-              </span>
+            {/* CTA Buttons */}
+            {!showMissionSelector ? (
+              <button
+                onClick={() => setShowMissionSelector(true)}
+                className="w-full py-6 bg-gradient-to-r from-[#FF6B35] to-[#FFB800] text-white font-bold text-2xl rounded-2xl hover:scale-105 transition-transform shadow-xl hover:shadow-2xl hover:shadow-[#FF6B35]/50"
+              >
+                Choose Your Mission 🎯
+              </button>
             ) : (
-              <span className="flex items-center gap-2">
-                <span>⚡</span>
-                Check & Claim
-              </span>
+              <div className="space-y-4">
+                <button
+                  onClick={() => {
+                    const mission = missions.find(m => m.difficulty === selectedMission);
+                    const hashtag = mission?.hashtag || "#BasedVibes";
+                    const text = `${hashtag} - Building on Base 💙`;
+                    window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`, '_blank');
+                  }}
+                  className="w-full py-6 bg-gradient-to-r from-[#0052FF] to-[#4169E1] text-white font-bold text-2xl rounded-2xl hover:scale-105 transition-transform shadow-xl hover:shadow-2xl hover:shadow-[#0052FF]/50"
+                >
+                  Post on Farcaster 📝
+                </button>
+                
+                <button
+                  onClick={handleClaim}
+                  disabled={claiming}
+                  className="w-full py-6 bg-gradient-to-r from-[#00D395] to-[#0052FF] text-white font-bold text-2xl rounded-2xl hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl hover:shadow-[#00D395]/50"
+                >
+                  {claiming ? "Verifying..." : "Verify & Claim Streak ✅"}
+                </button>
+              </div>
             )}
-          </Button>
 
-          {message && (
-            <div className={`mt-4 p-4 rounded-lg ${
-              message.includes('successfully') || message.includes('streak') || message.includes('🔥')
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
-              <p className="text-center font-medium">{message}</p>
-            </div>
-          )}
+            <p className="text-center text-gray-400 mt-4 text-sm">
+              Complete daily missions to keep your streak alive
+            </p>
+          </div>
         </div>
 
-        {/* Badges */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-3xl">🏆</span>
-            <h2 className="text-2xl font-bold text-gray-900">Your Badges ({badges.length})</h2>
-          </div>
-
-          {badges.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
-              Start your streak to earn badges!
-            </p>
-          ) : (
-            <div className="grid grid-cols-4 gap-4">
-              {badges.map((badge) => (
-                <div key={badge} className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border-2 border-yellow-200">
-                  <span className="text-4xl">🏅</span>
-                  <span className="text-sm font-bold text-gray-700">{badge} Days</span>
-                </div>
+        {/* MISSION SELECTOR */}
+        {showMissionSelector && (
+          <div className="mb-8 space-y-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-bold text-white">Pick Your Mission 🎯</h2>
+              <button
+                onClick={() => setShowMissionSelector(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel ✕
+              </button>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              {missions.map((mission) => (
+                <MissionCard
+                  key={mission.id}
+                  mission={mission}
+                  isSelected={selectedMission === mission.difficulty}
+                  onSelect={() => setSelectedMission(mission.difficulty)}
+                />
               ))}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Rewards Section */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Season Rewards */}
+          <div className="bg-[#12161E] rounded-2xl p-8 border border-[#0052FF]/30">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-4xl">🏆</span>
+              <h3 className="text-2xl font-bold text-white">Season Rewards</h3>
+            </div>
+            <div className="space-y-3 text-gray-300">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🌱</span>
+                <span>7 days → Seed Badge</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🔥</span>
+                <span>14 days → Flame Badge</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">💎</span>
+                <span>21 days → Diamond Badge</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👑</span>
+                <span>30 days → Crown Badge</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Referral */}
+          <div className="bg-[#12161E] rounded-2xl p-8 border border-[#00D395]/30">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-4xl">🤝</span>
+              <h3 className="text-2xl font-bold text-white">Referral Program</h3>
+            </div>
+            <p className="text-gray-300 text-lg mb-4">
+              Invite friends to join Based Streaks! Both of you earn bonus XP when they complete their first 3-day streak.
+            </p>
+            <div className="bg-[#070A0E] rounded-xl p-4 border border-[#00D395]">
+              <span className="text-[#00D395] font-bold text-2xl">+50 XP</span>
+              <span className="text-gray-400 ml-2">per successful referral</span>
+            </div>
+          </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-            <span className="text-3xl mb-2 block">🔥</span>
-            <p className="text-3xl font-bold text-gray-900">{streak}</p>
-            <p className="text-sm text-gray-600 mt-1">Days</p>
+        {/* Leaderboard Preview */}
+        <div className="bg-[#12161E] rounded-2xl p-8 border border-[#FFB800]/30">
+          <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            🏆 Top Based Builders
+          </h3>
+          <div className="space-y-3">
+            {[
+              { rank: 1, name: "0xbee.eth", xp: 520, emoji: "👑" },
+              { rank: 2, name: "han.base", xp: 500, emoji: "💎" },
+              { rank: 3, name: "basedguy", xp: 485, emoji: "🔥" }
+            ].map((user) => (
+              <div key={user.rank} className="flex items-center justify-between bg-[#070A0E] rounded-xl p-4">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                    user.rank === 1 ? "bg-yellow-500" : 
+                    user.rank === 2 ? "bg-gray-400" : 
+                    "bg-orange-600"
+                  }`}>
+                    {user.rank}
+                  </div>
+                  <span className="text-xl">{user.emoji}</span>
+                  <span className="text-white font-medium">{user.name}</span>
+                </div>
+                <div className="bg-[#FF6B35] px-4 py-2 rounded-lg font-bold text-white">
+                  {user.xp} XP
+                </div>
+              </div>
+            ))}
           </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-            <span className="text-3xl mb-2 block">🏅</span>
-            <p className="text-3xl font-bold text-gray-900">{badges.length}</p>
-            <p className="text-sm text-gray-600 mt-1">Badges</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-            <span className="text-3xl mb-2 block">⚡</span>
-            <p className="text-3xl font-bold text-gray-900">{totalXp}</p>
-            <p className="text-sm text-gray-600 mt-1">XP</p>
-          </div>
+          <button className="w-full mt-6 py-3 bg-[#070A0E] text-[#FFB800] font-bold rounded-xl border border-[#FFB800] hover:bg-[#FFB800]/10 transition">
+            View Full Leaderboard →
+          </button>
         </div>
-
-      </div>
+      </main>
     </div>
-  )
+  );
 }
