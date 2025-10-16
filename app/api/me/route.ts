@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
