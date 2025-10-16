@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// In-memory storage (will be replaced with KV later)
-const userStreaks = new Map<number, {
-  currentStreak: number;
-  maxStreak: number;
-  totalXP: number;
-  lastClaimDate: string;
-  badges: string[];
-}>();
+import { kv } from "@vercel/kv";
 
 const MISSION_XP = {
   easy: 10,
@@ -23,7 +15,6 @@ const MISSION_HASHTAGS = {
   legendary: "#BasedCreator"
 };
 
-// Milestone badges
 const BADGES = [
   { days: 7, name: "Seed", emoji: "🌱" },
   { days: 14, name: "Flame", emoji: "🔥" },
@@ -32,19 +23,14 @@ const BADGES = [
 ];
 
 async function verifyFarcasterPost(fid: number, hashtag: string): Promise<boolean> {
-  // TODO: Implement Neynar API verification
-  // For now, we'll simulate verification
-  
   const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
   
   if (!NEYNAR_API_KEY || NEYNAR_API_KEY === "demo") {
-    // Dev mode: always return true
     console.log(`[DEV MODE] Skipping verification for FID ${fid}, hashtag ${hashtag}`);
     return true;
   }
 
   try {
-    // Get user's recent casts from Neynar
     const response = await fetch(
       `https://api.neynar.com/v2/farcaster/casts?fid=${fid}&limit=25`,
       {
@@ -62,7 +48,6 @@ async function verifyFarcasterPost(fid: number, hashtag: string): Promise<boolea
     const data = await response.json();
     const casts = data.casts || [];
 
-    // Check if any cast from today contains the hashtag
     const today = new Date().toISOString().split("T")[0];
     const todayCasts = casts.filter((cast: any) => {
       const castDate = new Date(cast.timestamp).toISOString().split("T")[0];
@@ -93,28 +78,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get or create user data
-    let userData = userStreaks.get(fid);
-    if (!userData) {
+    // Fetch user data from KV
+    const userKey = `user:${fid}`;
+    let userData = await kv.hgetall(userKey);
+
+    // Initialize new user
+    if (!userData || Object.keys(userData).length === 0) {
       userData = {
-        currentStreak: 0,
-        maxStreak: 0,
-        totalXP: 0,
+        currentStreak: "0",
+        maxStreak: "0",
+        totalXP: "0",
         lastClaimDate: "",
-        badges: []
+        badges: "[]"
       };
-      userStreaks.set(fid, userData);
     }
+
+    // Parse data
+    let currentStreak = parseInt(userData.currentStreak as string) || 0;
+    let maxStreak = parseInt(userData.maxStreak as string) || 0;
+    let totalXP = parseInt(userData.totalXP as string) || 0;
+    let lastClaimDate = userData.lastClaimDate as string || "";
+    let badges = userData.badges 
+      ? (typeof userData.badges === 'string' ? JSON.parse(userData.badges as string) : userData.badges)
+      : [];
 
     // Check if already claimed today
     const today = new Date().toISOString().split("T")[0];
-    if (userData.lastClaimDate === today) {
+    if (lastClaimDate === today) {
       return NextResponse.json({
         success: false,
         message: "Already claimed today! Come back tomorrow 🔥",
-        currentStreak: userData.currentStreak,
-        maxStreak: userData.maxStreak,
-        totalXP: userData.totalXP
+        currentStreak,
+        maxStreak,
+        totalXP
       });
     }
 
@@ -126,60 +122,69 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         message: `Post with ${requiredHashtag} not found. Please post on Farcaster first!`,
-        currentStreak: userData.currentStreak,
-        maxStreak: userData.maxStreak,
-        totalXP: userData.totalXP
+        currentStreak,
+        maxStreak,
+        totalXP
       });
     }
 
-    // Calculate if streak continues
+    // Calculate streak continuation
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-    if (userData.lastClaimDate === yesterdayStr || userData.currentStreak === 0) {
-      // Streak continues
-      userData.currentStreak += 1;
+    if (lastClaimDate === yesterdayStr || currentStreak === 0) {
+      currentStreak += 1;
     } else {
-      // Streak broken, restart
-      userData.currentStreak = 1;
+      currentStreak = 1;
     }
 
     // Update max streak
-    if (userData.currentStreak > userData.maxStreak) {
-      userData.maxStreak = userData.currentStreak;
+    if (currentStreak > maxStreak) {
+      maxStreak = currentStreak;
     }
 
-    // Award XP based on mission type
+    // Award XP
     const missionXP = MISSION_XP[missionType as keyof typeof MISSION_XP] || 10;
-    userData.totalXP += missionXP;
+    totalXP += missionXP;
 
     // Check for milestone badges
     const newBadges: string[] = [];
     for (const badge of BADGES) {
-      if (userData.currentStreak === badge.days && !userData.badges.includes(badge.name)) {
-        userData.badges.push(badge.name);
+      if (currentStreak === badge.days && !badges.includes(badge.name)) {
+        badges.push(badge.name);
         newBadges.push(badge.name);
-        // Bonus XP for badge
         const bonusXP = badge.days * 2;
-        userData.totalXP += bonusXP;
+        totalXP += bonusXP;
       }
     }
 
     // Update last claim date
-    userData.lastClaimDate = today;
+    lastClaimDate = today;
 
-    // Save updated data
-    userStreaks.set(fid, userData);
+    // Save to KV
+    await kv.hset(userKey, {
+      currentStreak: currentStreak.toString(),
+      maxStreak: maxStreak.toString(),
+      totalXP: totalXP.toString(),
+      lastClaimDate,
+      badges: JSON.stringify(badges)
+    });
+
+    // Update leaderboard (sorted set by totalXP)
+    await kv.zadd("leaderboard:global", {
+      score: totalXP,
+      member: fid.toString()
+    });
 
     return NextResponse.json({
       success: true,
       message: newBadges.length > 0 
         ? `Streak claimed! +${missionXP} XP. Badge unlocked: ${newBadges.join(", ")} 🎉`
         : `Streak claimed! +${missionXP} XP 🔥`,
-      currentStreak: userData.currentStreak,
-      maxStreak: userData.maxStreak,
-      totalXP: userData.totalXP,
+      currentStreak,
+      maxStreak,
+      totalXP,
       xpGained: missionXP,
       newBadges
     });
@@ -193,7 +198,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET endpoint for fetching user stats
+// GET endpoint for fetching user stats (kept for compatibility)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const fid = searchParams.get("fid");
@@ -205,9 +210,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const userData = userStreaks.get(parseInt(fid));
+  const userKey = `user:${fid}`;
+  const userData = await kv.hgetall(userKey);
 
-  if (!userData) {
+  if (!userData || Object.keys(userData).length === 0) {
     return NextResponse.json({
       currentStreak: 0,
       maxStreak: 0,
@@ -216,5 +222,14 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return NextResponse.json(userData);
+  const badges = userData.badges 
+    ? (typeof userData.badges === 'string' ? JSON.parse(userData.badges as string) : userData.badges)
+    : [];
+
+  return NextResponse.json({
+    currentStreak: parseInt(userData.currentStreak as string) || 0,
+    maxStreak: parseInt(userData.maxStreak as string) || 0,
+    totalXP: parseInt(userData.totalXP as string) || 0,
+    badges
+  });
 }

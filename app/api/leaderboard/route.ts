@@ -1,43 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// This will be imported from the same in-memory store
-// For now, we'll simulate it
-// TODO: Share state with check-and-claim API or use KV
-
-interface LeaderboardEntry {
-  fid: number;
-  username: string;
-  totalXP: number;
-  currentStreak: number;
-  badges: string[];
-}
-
-// Mock data for now - will be replaced with real data from KV
-const mockLeaderboard: LeaderboardEntry[] = [
-  { fid: 123456, username: "0xbee.eth", totalXP: 520, currentStreak: 30, badges: ["Crown"] },
-  { fid: 234567, username: "han.base", totalXP: 500, currentStreak: 28, badges: ["Diamond"] },
-  { fid: 345678, username: "basedguy", totalXP: 485, currentStreak: 25, badges: ["Diamond"] },
-  { fid: 456789, username: "bluebuild", totalXP: 470, currentStreak: 22, badges: ["Bee"] },
-  { fid: 567890, username: "seedling", totalXP: 450, currentStreak: 20, badges: ["Bee"] }
-];
+import { kv } from "@vercel/kv";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const limit = parseInt(searchParams.get("limit") || "10");
+  try {
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get("limit") || "10");
+    
+    // Get top users from leaderboard (sorted set, highest score first)
+    const topFids = await kv.zrange("leaderboard:global", 0, limit - 1, {
+      rev: true, // Reverse order (highest first)
+      withScores: true
+    });
 
-  // TODO: Fetch from KV and sort by totalXP
-  // For now, return mock data sorted by XP
-  const leaderboard = [...mockLeaderboard]
-    .sort((a, b) => b.totalXP - a.totalXP)
-    .slice(0, limit)
-    .map((entry, index) => ({
-      ...entry,
-      rank: index + 1
-    }));
+    // topFids format: [fid, score, fid, score, ...]
+    const leaderboard = [];
+    
+    for (let i = 0; i < topFids.length; i += 2) {
+      const fid = topFids[i] as string;
+      const totalXP = topFids[i + 1] as number;
+      
+      // Fetch user details
+      const userData = await kv.hgetall(`user:${fid}`);
+      
+      if (userData) {
+        leaderboard.push({
+          rank: Math.floor(i / 2) + 1,
+          fid: parseInt(fid),
+          totalXP,
+          currentStreak: parseInt(userData.currentStreak as string) || 0,
+          maxStreak: parseInt(userData.maxStreak as string) || 0,
+          badges: userData.badges 
+            ? (typeof userData.badges === 'string' ? JSON.parse(userData.badges as string) : userData.badges)
+            : []
+        });
+      }
+    }
 
-  return NextResponse.json({
-    leaderboard,
-    season: 1,
-    totalUsers: mockLeaderboard.length
-  });
+    return NextResponse.json({
+      success: true,
+      leaderboard,
+      total: leaderboard.length
+    });
+
+  } catch (error) {
+    console.error("Leaderboard error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch leaderboard" },
+      { status: 500 }
+    );
+  }
 }

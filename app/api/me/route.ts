@@ -1,53 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// This should import from shared storage
-// For now, we'll make a simple endpoint that calls other APIs
+import { kv } from "@vercel/kv";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const fid = searchParams.get("fid");
-
-  if (!fid) {
-    return NextResponse.json(
-      { error: "FID required" },
-      { status: 400 }
-    );
-  }
-
   try {
-    // Fetch user streak data
-    const streakResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/check-and-claim?fid=${fid}`,
-      { method: "GET" }
-    );
-    const streakData = await streakResponse.json();
+    const { searchParams } = new URL(req.url);
+    const fid = searchParams.get("fid");
 
-    // Fetch referral data
-    const referralResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/referral?fid=${fid}`,
-      { method: "GET" }
-    );
-    const referralData = await referralResponse.json();
+    if (!fid) {
+      return NextResponse.json(
+        { error: "FID required" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch user data from KV
+    const userData = await kv.hgetall(`user:${fid}`);
+
+    if (!userData || Object.keys(userData).length === 0) {
+      // Return default values for new users
+      return NextResponse.json({
+        currentStreak: 0,
+        maxStreak: 0,
+        totalXP: 0,
+        badges: [],
+        lastClaimDate: null
+      });
+    }
+
+    // Parse badges array (stored as JSON string)
+    const badges = userData.badges 
+      ? (typeof userData.badges === 'string' ? JSON.parse(userData.badges as string) : userData.badges)
+      : [];
 
     return NextResponse.json({
-      ...streakData,
-      referral: referralData
+      currentStreak: parseInt(userData.currentStreak as string) || 0,
+      maxStreak: parseInt(userData.maxStreak as string) || 0,
+      totalXP: parseInt(userData.totalXP as string) || 0,
+      badges,
+      lastClaimDate: userData.lastClaimDate || null
     });
 
   } catch (error) {
     console.error("Error fetching user data:", error);
-    
-    // Fallback to basic data
-    return NextResponse.json({
-      currentStreak: 0,
-      maxStreak: 0,
-      totalXP: 0,
-      badges: [],
-      referral: {
-        code: null,
-        totalReferrals: 0,
-        totalRewards: 0
-      }
-    });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
