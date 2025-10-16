@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useFarcasterContext } from "@/components/ui/farcaster-provider";
 import { MissionCard } from "@/components/ui/mission-card";
 import { getAllMissions, type MissionDifficulty } from "@/lib/missions";
+import { getCachedBasename, formatDisplayName } from "@/lib/basenames";
 
 export default function MainPage() {
   const { user, isLoading } = useFarcasterContext();
@@ -15,6 +16,8 @@ export default function MainPage() {
   const [claiming, setClaiming] = useState(false);
   const [selectedMission, setSelectedMission] = useState<MissionDifficulty>("medium");
   const [showMissionSelector, setShowMissionSelector] = useState(false);
+  const [basename, setBasename] = useState<string | null>(null);
+  const [userAddress, setUserAddress] = useState<string | null>(null);
 
   const currentFID = user?.fid || (devFID ? parseInt(devFID) : null);
   const missions = getAllMissions();
@@ -30,8 +33,21 @@ export default function MainPage() {
         setMaxStreak(data.maxStreak || 0);
         setTotalXP(data.totalXP || 0);
         setShowDevInput(false);
+        
+        // Fetch basename if we have user address
+        if (user?.pfpUrl) {
+          // Extract address from Farcaster user data if available
+          // For now, we'll skip this as Farcaster context might not have wallet
+        }
       });
-  }, [currentFID]);
+  }, [currentFID, user]);
+
+  // Fetch basename for user (if they connect wallet later)
+  useEffect(() => {
+    if (userAddress) {
+      getCachedBasename(userAddress).then(setBasename);
+    }
+  }, [userAddress]);
 
   const handleClaim = async () => {
     if (!currentFID) return;
@@ -93,16 +109,23 @@ export default function MainPage() {
             placeholder="Enter your FID for testing"
             value={devFID}
             onChange={(e) => setDevFID(e.target.value)}
-            className="w-full px-6 py-4 bg-[#070A0E] text-white rounded-xl border border-[#FF6B35] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] mb-4 text-lg"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && devFID) {
+                setShowDevInput(false);
+                localStorage.setItem('dev_fid', devFID);
+              }
+            }}
+            className="w-full px-6 py-4 bg-[#070A0E] text-white rounded-xl border border-[#0052FF] focus:outline-none focus:ring-2 focus:ring-[#0052FF] mb-4 text-lg"
           />
           <button
             onClick={() => {
               if (devFID) {
                 setShowDevInput(false);
-                localStorage.setItem('dev_fid', devFID); // Save for refresh
+                localStorage.setItem('dev_fid', devFID);
               }
             }}
-            className="w-full py-4 bg-gradient-to-r from-[#FF6B35] to-[#FFB800] text-white font-bold rounded-xl hover:scale-105 transition-transform text-lg shadow-lg hover:shadow-[#FF6B35]/50"
+            disabled={!devFID}
+            className="w-full py-4 bg-[#0052FF] text-white font-bold rounded-xl hover:bg-[#0052FF]/80 transition-all text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Enter Dev Mode
           </button>
@@ -132,8 +155,20 @@ export default function MainPage() {
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             🔥 <span className="bg-gradient-to-r from-[#FF6B35] to-[#FFB800] bg-clip-text text-transparent">Based Streaks</span>
           </h1>
-          <div className="text-sm text-gray-400">
-            FID: {currentFID}
+          <div className="flex items-center gap-3">
+            {basename && (
+              <a 
+                href={`https://www.base.org/names/${basename}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm bg-[#0052FF] text-white px-3 py-1 rounded-full hover:bg-[#0052FF]/80 transition-colors"
+              >
+                {basename}
+              </a>
+            )}
+            <div className="text-sm text-gray-400">
+              {user?.username || `FID: ${currentFID}`}
+            </div>
           </div>
         </div>
       </header>
@@ -146,16 +181,29 @@ export default function MainPage() {
           <div className="absolute inset-0 bg-gradient-radial from-[#FF6B35]/20 via-transparent to-transparent animate-pulse" />
           
           <div className="relative z-10">
-            {/* Living Flame Visualization */}
+            {/* Living BASE Visualization */}
             <div className="flex flex-col items-center mb-8">
               <div className="relative">
-                <div className="absolute inset-0 blur-3xl bg-gradient-to-t from-[#FF6B35] via-[#FFB800] to-[#FFDC64] opacity-40 animate-pulse" />
+                {/* Base Blue Square Glow */}
+                <div className="absolute inset-0 blur-3xl bg-[#0052FF] opacity-40 animate-pulse" />
                 
-                <div className="relative text-center">
-                  <div className="text-9xl mb-4 animate-bounce" style={{ animationDuration: "2s" }}>
-                    🔥
+                {/* Animated Base Square Stack */}
+                <div className="relative">
+                  <div className="flex flex-col items-center gap-2">
+                    {/* Stack of Base squares - grows with streak */}
+                    {[...Array(Math.min(streak, 10))].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-20 h-20 bg-[#0052FF] rounded-lg animate-pulse"
+                        style={{
+                          animationDelay: `${i * 0.1}s`,
+                          opacity: 1 - (i * 0.08)
+                        }}
+                      />
+                    ))}
                   </div>
                   
+                  {/* Streak number over squares */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-8xl font-black text-white drop-shadow-2xl">
                       {streak}
@@ -168,7 +216,7 @@ export default function MainPage() {
                 Day {streak}
               </h2>
               <p className="text-gray-400 text-xl">
-                Keep the flame alive!
+                Building Based 💙
               </p>
             </div>
 
@@ -268,30 +316,73 @@ export default function MainPage() {
 
         {/* Rewards Section */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Season Rewards */}
+          {/* Season Rewards - NOW WITH MINT! */}
           <div className="bg-[#12161E] rounded-2xl p-8 border border-[#0052FF]/30">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-4xl">🏆</span>
               <h3 className="text-2xl font-bold text-white">Season Rewards</h3>
             </div>
-            <div className="space-y-3 text-gray-300">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🌱</span>
-                <span>7 days → Seed Badge</span>
+            <div className="space-y-3 text-gray-300 mb-6">
+              <div className={`flex items-center justify-between p-3 rounded-xl ${streak >= 7 ? 'bg-[#0052FF]/20 border border-[#0052FF]' : 'bg-[#070A0E]'}`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🌱</span>
+                  <span>7 days → Seed Badge NFT</span>
+                </div>
+                {streak >= 7 && (
+                  <button 
+                    onClick={() => {/* TODO: Mint function */}}
+                    className="px-4 py-2 bg-[#0052FF] text-white text-sm font-bold rounded-lg hover:bg-[#0052FF]/80 transition-colors"
+                  >
+                    Mint FREE
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🔥</span>
-                <span>14 days → Flame Badge</span>
+              <div className={`flex items-center justify-between p-3 rounded-xl ${streak >= 14 ? 'bg-[#0052FF]/20 border border-[#0052FF]' : 'bg-[#070A0E]'}`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🔥</span>
+                  <span>14 days → Flame Badge NFT</span>
+                </div>
+                {streak >= 14 && (
+                  <button 
+                    onClick={() => {/* TODO: Mint function */}}
+                    className="px-4 py-2 bg-[#0052FF] text-white text-sm font-bold rounded-lg hover:bg-[#0052FF]/80 transition-colors"
+                  >
+                    Mint FREE
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">💎</span>
-                <span>21 days → Diamond Badge</span>
+              <div className={`flex items-center justify-between p-3 rounded-xl ${streak >= 21 ? 'bg-[#0052FF]/20 border border-[#0052FF]' : 'bg-[#070A0E]'}`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">💎</span>
+                  <span>21 days → Diamond Badge NFT</span>
+                </div>
+                {streak >= 21 && (
+                  <button 
+                    onClick={() => {/* TODO: Mint function */}}
+                    className="px-4 py-2 bg-[#0052FF] text-white text-sm font-bold rounded-lg hover:bg-[#0052FF]/80 transition-colors"
+                  >
+                    Mint FREE
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">👑</span>
-                <span>30 days → Crown Badge</span>
+              <div className={`flex items-center justify-between p-3 rounded-xl ${streak >= 30 ? 'bg-[#0052FF]/20 border border-[#0052FF]' : 'bg-[#070A0E]'}`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">👑</span>
+                  <span>30 days → Crown Badge NFT</span>
+                </div>
+                {streak >= 30 && (
+                  <button 
+                    onClick={() => {/* TODO: Mint function */}}
+                    className="px-4 py-2 bg-[#0052FF] text-white text-sm font-bold rounded-lg hover:bg-[#0052FF]/80 transition-colors"
+                  >
+                    Mint FREE
+                  </button>
+                )}
               </div>
             </div>
+            <p className="text-xs text-gray-500 bg-[#0052FF]/10 p-3 rounded-lg border border-[#0052FF]/20">
+              💙 NFT badges minted on Base (ERC-1155). Completely free, gas sponsored!
+            </p>
           </div>
 
           {/* Referral */}
