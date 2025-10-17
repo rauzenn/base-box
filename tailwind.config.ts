@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: ["class"],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,6 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Based Streaks Design Tokens
         baseBlue: "#0052FF",
         ink: "#0A0E14",
         bg: "#0C101A",
@@ -19,12 +21,30 @@ const config: Config = {
         silver: "#CBD5FF",
         bronze: "#FFC496",
       },
+      borderRadius: {
+        md: "16px",
+        lg: "24px",
+        xl: "28px",
+      },
+      fontFamily: {
+        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+      },
       maxWidth: {
         frame: "420px",
       },
+      animation: {
+        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      backdropBlur: {
+        xs: '2px',
+        sm: '4px',
+        md: '12px',
+        lg: '16px',
+        xl: '24px',
+      },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;
