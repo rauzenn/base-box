@@ -21,6 +21,26 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Custom Utilities */
+@layer utilities {
+  .bg-gradient-radial {
+    background-image: radial-gradient(var(--tw-gradient-stops));
+  }
+  
+  .animate-slide-slow {
+    animation: slide 60s linear infinite;
+  }
+  
+  @keyframes slide {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+}
+
 /* Remove default button styles */
 button {
   border: none;

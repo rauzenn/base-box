@@ -2,86 +2,44 @@
 
 import { useState, useEffect } from "react";
 import { useFarcasterContext } from "@/components/ui/farcaster-provider";
-import { AnimatedBackground } from "@/components/ui/animated-background";
-import { CountdownTimer } from "@/components/ui/countdown-timer";
+import { BaseBoxBackground } from "@/components/ui/base-box-background";
+import { BottomNav } from "@/components/ui/bottom-nav";
+import { Clock, Lock, Unlock, TrendingUp } from "lucide-react";
 
 export default function Home() {
   const { user, isLoading } = useFarcasterContext();
-  const [streak, setStreak] = useState(0);
-  const [maxStreak, setMaxStreak] = useState(0);
-  const [totalXP, setTotalXP] = useState(0);
   const [devFID, setDevFID] = useState("");
   const [showDevInput, setShowDevInput] = useState(true);
-  const [claiming, setClaiming] = useState(false);
-  const [showCountdown, setShowCountdown] = useState(false);
-  const [builderScore, setBuilderScore] = useState(0);
+  const [stats, setStats] = useState({
+    totalCapsules: 0,
+    lockedCapsules: 0,
+    revealedCapsules: 0,
+    nextReveal: null as string | null,
+  });
 
   const currentFID = user?.fid || (devFID ? parseInt(devFID) : null);
 
-  // Fetch user stats
+  // Fetch user capsule stats
   useEffect(() => {
     if (!currentFID) return;
 
-    fetch(`/api/me?fid=${currentFID}`)
+    fetch(`/api/capsules/stats?fid=${currentFID}`)
       .then((r) => r.json())
       .then((data) => {
-        setStreak(data.currentStreak || 0);
-        setMaxStreak(data.maxStreak || 0);
-        setTotalXP(data.totalXP || 0);
+        setStats(data);
         setShowDevInput(false);
-
-        // Check if already claimed today
-        const today = new Date().toISOString().split("T")[0];
-        if (data.lastClaimDate === today) {
-          setShowCountdown(true);
-        }
       })
       .catch((err) => console.error("Error:", err));
   }, [currentFID]);
 
-  // Calculate Builder Score
-  useEffect(() => {
-    if (totalXP || streak) {
-      setBuilderScore(Math.floor(totalXP * 0.5 + streak * 10));
-    }
-  }, [totalXP, streak]);
-
-  const handleClaim = async () => {
-    if (!currentFID) return;
-    setClaiming(true);
-
-    try {
-      const res = await fetch("/api/check-and-claim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fid: currentFID, missionType: "medium" }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setStreak(data.currentStreak);
-        setMaxStreak(data.maxStreak);
-        setTotalXP(data.totalXP);
-        setShowCountdown(true);
-        alert(data.message);
-      } else {
-        alert(data.message || "Failed to claim");
-      }
-    } catch (err) {
-      alert("Error claiming streak");
-    } finally {
-      setClaiming(false);
-    }
-  };
-
   // Loading
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0052FF] flex items-center justify-center">
-        <AnimatedBackground />
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <BaseBoxBackground />
         <div className="relative z-10 text-center">
-          <div className="w-24 h-24 bg-white rounded-3xl animate-pulse mx-auto mb-4" />
-          <p className="text-white text-xl font-bold">Loading...</p>
+          <div className="w-24 h-24 border-4 border-[#0052FF] rounded-2xl animate-pulse mx-auto mb-4" />
+          <p className="text-white text-xl font-bold">Loading Base Box...</p>
         </div>
       </div>
     );
@@ -91,19 +49,19 @@ export default function Home() {
   if (showDevInput && !user && !isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <AnimatedBackground />
-        <div className="relative z-10 bg-white/10 backdrop-blur-xl rounded-3xl p-12 max-w-md w-full border-4 border-white/30 shadow-2xl">
+        <BaseBoxBackground />
+        <div className="relative z-10 bg-[#0A0E14]/80 backdrop-blur-xl rounded-3xl p-12 max-w-md w-full border-2 border-[#0052FF]/30 shadow-2xl">
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center">
-              <span className="text-4xl font-black text-[#0052FF]">BS</span>
+            <div className="w-20 h-20 bg-[#0052FF] rounded-2xl shadow-lg shadow-[#0052FF]/50 flex items-center justify-center">
+              <Lock className="w-10 h-10 text-white" />
             </div>
           </div>
 
           <h1 className="text-4xl font-black text-white mb-2 text-center">
-            Based Streaks
+            Base Box
           </h1>
-          <p className="text-white/80 text-center mb-8 font-medium">
-            Just Based. Daily.
+          <p className="text-gray-400 text-center mb-8 font-medium">
+            Keep your words on-chain, meet them in the future
           </p>
 
           <input
@@ -112,13 +70,13 @@ export default function Home() {
             placeholder="Enter your FID"
             value={devFID}
             onChange={(e) => setDevFID(e.target.value.replace(/[^0-9]/g, ""))}
-            className="w-full px-6 py-4 bg-white/20 text-white placeholder-white/60 rounded-xl border-2 border-white/30 focus:outline-none focus:border-white mb-4 text-lg"
+            className="w-full px-6 py-4 bg-black/50 text-white placeholder-gray-500 rounded-xl border-2 border-[#0052FF]/30 focus:outline-none focus:border-[#0052FF] mb-4 text-lg"
           />
 
           <button
             onClick={() => devFID && setShowDevInput(false)}
             disabled={!devFID}
-            className="w-full py-4 bg-white text-[#0052FF] font-black rounded-xl hover:bg-white/90 disabled:opacity-30"
+            className="w-full py-4 bg-[#0052FF] text-white font-black rounded-xl hover:bg-[#0052FF]/90 disabled:opacity-30 shadow-lg shadow-[#0052FF]/20"
           >
             Enter
           </button>
@@ -127,76 +85,103 @@ export default function Home() {
     );
   }
 
-  // Main UI
+  // Main Home
   return (
-    <div className="min-h-screen">
-      <AnimatedBackground />
+    <div className="min-h-screen pb-24">
+      <BaseBoxBackground />
 
       <div className="relative z-10 max-w-2xl mx-auto px-6 py-8">
-        {/* Header Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-black/40 backdrop-blur-md rounded-xl p-4 border-2 border-white/20">
-            <div className="text-white/70 text-sm">Builder Score</div>
-            <div className="text-3xl font-black text-white">{builderScore}</div>
+        {/* Header */}
+        <header className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-[#0052FF] rounded-xl shadow-lg shadow-[#0052FF]/50 flex items-center justify-center">
+              <Lock className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white">Base Box</h1>
+              <p className="text-sm text-gray-400">
+                {user?.username || `FID: ${currentFID}`}
+              </p>
+            </div>
           </div>
-          <div className="bg-black/40 backdrop-blur-md rounded-xl p-4 border-2 border-white/20">
-            <div className="text-white/70 text-sm">Your Streak</div>
-            <div className="text-3xl font-black text-white">{streak}</div>
+        </header>
+
+        {/* Hero Tagline */}
+        <div className="mb-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-2">
+            Time remembers.
+          </h2>
+          <p className="text-xl text-[#0052FF]">Base preserves.</p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-[#0A0E14]/60 backdrop-blur-md rounded-2xl p-6 border-2 border-[#0052FF]/20">
+            <div className="flex items-center gap-3 mb-3">
+              <Lock className="w-8 h-8 text-[#0052FF]" />
+              <div className="text-gray-400 text-sm">Locked</div>
+            </div>
+            <div className="text-4xl font-black text-white">
+              {stats.lockedCapsules}
+            </div>
+          </div>
+
+          <div className="bg-[#0A0E14]/60 backdrop-blur-md rounded-2xl p-6 border-2 border-[#00D395]/20">
+            <div className="flex items-center gap-3 mb-3">
+              <Unlock className="w-8 h-8 text-[#00D395]" />
+              <div className="text-gray-400 text-sm">Revealed</div>
+            </div>
+            <div className="text-4xl font-black text-white">
+              {stats.revealedCapsules}
+            </div>
           </div>
         </div>
 
-        {/* Just Based Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center items-center gap-4 mb-3">
-            <div className="w-12 h-12 bg-white rounded-xl shadow-lg" />
-            <div className="w-12 h-12 bg-white rounded-xl shadow-lg" />
-            <div className="w-12 h-12 bg-white rounded-xl shadow-lg" />
-            <div className="w-12 h-12 bg-white rounded-xl shadow-lg" />
-          </div>
-          <h1 className="text-4xl font-black text-white uppercase tracking-wider">
-            Just Based
-          </h1>
-        </div>
-
-        {/* Countdown or Claim */}
-        {showCountdown ? (
-          <CountdownTimer />
-        ) : (
-          <div className="mb-8">
-            <button
-              onClick={handleClaim}
-              disabled={claiming}
-              className="w-full py-8 bg-white text-[#0052FF] font-black text-3xl rounded-3xl hover:bg-white/90 shadow-2xl disabled:opacity-50 border-4 border-white/50"
-            >
-              {claiming ? "Checking..." : "Check & Claim ✅"}
-            </button>
-            <p className="text-white/70 text-sm text-center mt-4">
-              Boost your daily Base TX count
-            </p>
+        {/* Next Reveal Countdown */}
+        {stats.nextReveal && (
+          <div className="bg-gradient-to-br from-[#0052FF]/20 to-[#00D395]/20 backdrop-blur-md rounded-3xl p-8 border-2 border-[#0052FF]/30 mb-8">
+            <div className="text-center mb-4">
+              <Clock className="w-16 h-16 text-[#0052FF] mx-auto mb-4 animate-pulse" />
+              <h3 className="text-xl font-bold text-white mb-2">
+                Next Capsule Unlocks In
+              </h3>
+              <div className="text-5xl font-black text-white font-mono">
+                {stats.nextReveal}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border-2 border-white/20 text-center">
-            <div className="text-white/70 text-xs mb-2">Current</div>
-            <div className="text-3xl font-black text-white">{streak}</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border-2 border-white/20 text-center">
-            <div className="text-white/70 text-xs mb-2">Max</div>
-            <div className="text-3xl font-black text-white">{maxStreak}</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border-2 border-white/20 text-center">
-            <div className="text-white/70 text-xs mb-2">XP</div>
-            <div className="text-3xl font-black text-white">{totalXP}</div>
-          </div>
+        {/* Quick Actions */}
+        <div className="space-y-4">
+          <a
+            href="/create"
+            className="block w-full py-6 bg-[#0052FF] text-white font-black text-xl rounded-2xl text-center hover:bg-[#0052FF]/90 shadow-xl shadow-[#0052FF]/20"
+          >
+            Lock a New Capsule 🎁
+          </a>
+
+          <a
+            href="/capsules"
+            className="block w-full py-4 bg-[#0A0E14]/60 text-white font-bold rounded-xl text-center border-2 border-[#0052FF]/30 hover:border-[#0052FF]"
+          >
+            View All Capsules
+          </a>
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-white/60 text-sm">
-          <p>All for less than a penny (0.000002eth)</p>
+        {/* Recent Activity */}
+        <div className="mt-8">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-[#0052FF]" />
+            Recent Activity
+          </h3>
+          <div className="text-gray-400 text-sm text-center py-8 border border-[#0052FF]/20 rounded-xl">
+            No recent activity
+          </div>
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 }
