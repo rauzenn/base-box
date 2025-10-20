@@ -1,57 +1,44 @@
-import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { kv } from '@vercel/kv';
+import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { fid, message, durationDays } = body;
+    const body = await request.json();
+    console.log('📥 Create request:', body);
+    
+    const { fid, message, unlockDate } = body;
 
-    if (!fid || !message || !durationDays) {
-      return NextResponse.json(
-        { success: false, message: "Missing required fields" },
-        { status: 400 }
-      );
+    if (!fid || !message || !unlockDate) {
+      console.log('❌ Missing fields');
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Generate unique capsule ID
-    const capsuleId = `${fid}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // Calculate unlock date
-    const unlockDate = Date.now() + durationDays * 24 * 60 * 60 * 1000;
-
-    // Store capsule in KV
-    await kv.hset(`capsule:${capsuleId}`, {
+    const capsuleId = `${fid}-${Date.now()}`;
+    const capsule = {
       id: capsuleId,
-      fid: fid.toString(),
+      fid,
       message,
-      createdAt: Date.now().toString(),
-      unlockDate: unlockDate.toString(),
-      revealed: "false",
-    });
+      createdAt: new Date().toISOString(),
+      unlockDate,
+      revealed: false,
+    };
 
-    // Add capsule ID to user's set
+    console.log('💾 Saving capsule:', capsule);
+
+    await kv.set(`capsule:${capsuleId}`, capsule);
     await kv.sadd(`user:${fid}:capsules`, capsuleId);
 
-    // Add to global capsules (for community feed)
-    await kv.zadd("capsules:global", {
-      score: unlockDate,
-      member: capsuleId,
-    });
+    console.log('✅ Capsule saved!');
 
-    return NextResponse.json({
-      success: true,
-      capsuleId,
-      unlockDate,
-      message: "Capsule locked successfully!",
-    });
-  } catch (error) {
-    console.error("Create capsule error:", error);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, capsule });
+  } catch (error: any) {
+    console.error('❌ Create error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to create capsule',
+      details: error?.message 
+    }, { status: 500 });
   }
 }

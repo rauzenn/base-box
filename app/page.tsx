@@ -1,5 +1,13 @@
 "use client";
 
+import { CountdownTimer } from '@/components/ui/countdown-timer';
+
+// Home component içinde, Next Reveal bölümüne:
+<div className="bg-gradient-to-br from-[#0052FF]/10 to-[#00D395]/10 rounded-2xl p-6 border-2 border-[#0052FF]/30">
+  <h3 className="text-white font-bold text-lg mb-4">⏰ Next Reveal</h3>
+  <CountdownTimer unlockDate={new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()} />
+</div>
+
 import { useState, useEffect } from "react";
 import { useFarcasterContext } from "@/components/ui/farcaster-provider";
 import { BaseBoxBackground } from "@/components/ui/base-box-background";

@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/inter"; // ✅ DOĞRU PAKET
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { FarcasterProvider } from "@/components/ui/farcaster-provider";
+import { BaseBoxBackground } from "@/components/ui/base-box-background";
+import { BottomNav } from "@/components/ui/bottom-nav";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Based Streaks",
-  description: "Daily #gmBase check-in. Keep the streak.",
-  icons: {
-    icon: "/bs_logo_512.png",
-    apple: "/bs_logo_1024.png",
-  },
+  title: "Base Box",
+  description: "Time capsules on Base blockchain",
 };
 
 export default function RootLayout({
@@ -19,10 +18,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased font-sans">
-        <FarcasterProvider>
+      <body className={inter.className}>
+        <BaseBoxBackground />
+        <main className="relative z-10">
           {children}
-        </FarcasterProvider>
+        </main>
+        <BottomNav />
       </body>
     </html>
   );

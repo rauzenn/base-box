@@ -1,147 +1,118 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { BaseBoxBackground } from "@/components/ui/base-box-background";
-import { BottomNav } from "@/components/ui/bottom-nav";
-import { useFarcasterContext } from "@/components/ui/farcaster-provider";
-import { Lock, Calendar, MessageSquare } from "lucide-react";
+import React, { useState } from 'react';
+import { Lock, Package, Clock } from 'lucide-react';
+import { CountdownTimer } from '@/components/ui/countdown-timer';
 
-export default function CreateCapsule() {
-  const { user } = useFarcasterContext();
-  const [message, setMessage] = useState("");
-  const [duration, setDuration] = useState("30"); // days
-  const [creating, setCreating] = useState(false);
+export default function CapsulesPage() {
+  const [filter, setFilter] = useState('all');
 
-  const handleCreate = async () => {
-    if (!user?.fid || !message.trim()) return;
-    
-    setCreating(true);
+  // Mock data - unlockDate ekledik
+  const capsules = [
+    { 
+      id: 1, 
+      locked: true, 
+      unlockDate: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000).toISOString(),
+      preview: 'My predictions for 2025...' 
+    },
+    { 
+      id: 2, 
+      locked: true, 
+      unlockDate: new Date(Date.now() + 89 * 24 * 60 * 60 * 1000).toISOString(),
+      preview: 'Dear future me, remember...' 
+    },
+    { 
+      id: 3, 
+      locked: false, 
+      unlockDate: '2024-12-15',
+      message: 'I thought ETH would hit $5k...' 
+    },
+  ];
 
-    try {
-      const res = await fetch("/api/capsules/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fid: user.fid,
-          message: message.trim(),
-          durationDays: parseInt(duration),
-        }),
-      });
-
-      const data = await res.json();
-      
-      if (data.success) {
-        alert(`Capsule locked! Unlocks on ${new Date(data.unlockDate).toLocaleDateString()}`);
-        setMessage("");
-      } else {
-        alert(data.message || "Failed to create capsule");
-      }
-    } catch (err) {
-      alert("Error creating capsule");
-    } finally {
-      setCreating(false);
-    }
-  };
+  const filteredCapsules = capsules.filter(c => {
+    if (filter === 'locked') return c.locked;
+    if (filter === 'revealed') return !c.locked;
+    return true;
+  });
 
   return (
-    <div className="min-h-screen pb-24">
-      <BaseBoxBackground />
-
-      <div className="relative z-10 max-w-2xl mx-auto px-6 py-8">
-        {/* Header */}
-        <header className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-[#0052FF] rounded-xl shadow-lg shadow-[#0052FF]/50 flex items-center justify-center">
-              <Lock className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white">Lock a Capsule</h1>
-              <p className="text-sm text-gray-400">
-                What will your future self say?
-              </p>
-            </div>
-          </div>
-        </header>
-
-        {/* Form */}
-        <div className="space-y-6">
-          {/* Message Input */}
-          <div className="bg-[#0A0E14]/60 backdrop-blur-md rounded-2xl p-6 border-2 border-[#0052FF]/20">
-            <label className="flex items-center gap-2 text-white font-bold mb-3">
-              <MessageSquare className="w-5 h-5 text-[#0052FF]" />
-              Your Message
-            </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Write a prediction, memory, or message for the future..."
-              rows={6}
-              maxLength={500}
-              className="w-full px-4 py-3 bg-black/50 text-white placeholder-gray-500 rounded-xl border-2 border-[#0052FF]/30 focus:outline-none focus:border-[#0052FF] resize-none"
-            />
-            <div className="text-right text-sm text-gray-500 mt-2">
-              {message.length}/500
-            </div>
-          </div>
-
-          {/* Duration Selector */}
-          <div className="bg-[#0A0E14]/60 backdrop-blur-md rounded-2xl p-6 border-2 border-[#0052FF]/20">
-            <label className="flex items-center gap-2 text-white font-bold mb-4">
-              <Calendar className="w-5 h-5 text-[#0052FF]" />
-              Lock Duration
-            </label>
-            
-            <div className="grid grid-cols-5 gap-3">
-              {["1", "7", "30", "90", "365"].map((days) => (
-                <button
-                  key={days}
-                  onClick={() => setDuration(days)}
-                  className={`py-3 rounded-xl font-bold transition-all ${
-                    duration === days
-                      ? "bg-[#0052FF] text-white shadow-lg shadow-[#0052FF]/30"
-                      : "bg-black/50 text-gray-400 border border-[#0052FF]/30 hover:border-[#0052FF]"
-                  }`}
-                >
-                  {days}d
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-4 text-center text-sm text-gray-400">
-              Unlocks on{" "}
-              <span className="text-[#0052FF] font-bold">
-                {new Date(
-                  Date.now() + parseInt(duration) * 24 * 60 * 60 * 1000
-                ).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-
-          {/* Examples */}
-          <div className="bg-gradient-to-br from-[#0052FF]/10 to-transparent rounded-xl p-4 border border-[#0052FF]/20">
-            <p className="text-gray-400 text-sm mb-2 font-bold">
-              💡 Example Messages:
-            </p>
-            <ul className="text-gray-500 text-xs space-y-1">
-              <li>"Base will hit $100B TVL by 2026"</li>
-              <li>"ETH price prediction: $10,000"</li>
-              <li>"Dear future me, remember why you started building..."</li>
-              <li>"This is my first Base transaction ever!"</li>
-            </ul>
-          </div>
-
-          {/* Submit Button */}
-          <button
-            onClick={handleCreate}
-            disabled={creating || !message.trim()}
-            className="w-full py-6 bg-[#0052FF] text-white font-black text-xl rounded-2xl hover:bg-[#0052FF]/90 disabled:opacity-30 disabled:cursor-not-allowed shadow-xl shadow-[#0052FF]/20"
-          >
-            {creating ? "Locking..." : "Lock Capsule 🔒"}
-          </button>
+    <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6 pb-28">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl font-black text-white mb-8">My Capsules</h1>
+        
+        {/* Filter Tabs */}
+        <div className="flex gap-4 mb-8">
+          {['all', 'locked', 'revealed'].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-6 py-3 rounded-xl font-bold transition-all ${
+                filter === f
+                  ? 'bg-gradient-to-r from-[#0052FF] to-[#00D395] text-white shadow-lg'
+                  : 'bg-black/50 text-gray-400 hover:text-white hover:bg-black/70'
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
         </div>
-      </div>
 
-      <BottomNav />
+        {/* Capsule Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredCapsules.map((capsule) => (
+            <div
+              key={capsule.id}
+              className="bg-[#0A0E14]/80 backdrop-blur-lg rounded-2xl p-6 border-2 border-[#0052FF]/20 hover:border-[#0052FF]/50 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
+            >
+              <div className="flex items-start justify-between mb-4">
+                {capsule.locked ? (
+                  <div className="w-14 h-14 bg-[#0052FF]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Lock className="w-7 h-7 text-[#0052FF]" />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 bg-[#00D395]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Package className="w-7 h-7 text-[#00D395]" />
+                  </div>
+                )}
+                <span className={`px-4 py-2 rounded-full text-xs font-black ${
+                  capsule.locked ? 'bg-[#0052FF]/20 text-[#0052FF]' : 'bg-[#00D395]/20 text-[#00D395]'
+                }`}>
+                  {capsule.locked ? '🔒 LOCKED' : '🔓 REVEALED'}
+                </span>
+              </div>
+              
+              <p className="text-gray-300 text-base mb-4 line-clamp-2 font-medium">
+                {capsule.locked ? capsule.preview : capsule.message}
+              </p>
+              
+              {capsule.locked ? (
+                <div className="bg-black/40 rounded-xl p-4 border border-[#0052FF]/20">
+                  <CountdownTimer unlockDate={capsule.unlockDate} />
+                </div>
+              ) : (
+                <div className="text-gray-500 text-sm font-medium flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Revealed on {new Date(capsule.unlockDate).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {filteredCapsules.length === 0 && (
+          <div className="text-center py-20">
+            <div className="w-24 h-24 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Package className="w-12 h-12 text-gray-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">No capsules yet</h3>
+            <p className="text-gray-400 mb-8">Create your first time capsule!</p>
+            <button className="bg-gradient-to-r from-[#0052FF] to-[#00D395] text-white px-8 py-3 rounded-xl font-bold hover:shadow-xl transition-all">
+              Create Capsule
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

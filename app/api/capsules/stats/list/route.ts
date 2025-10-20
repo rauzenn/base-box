@@ -1,51 +1,56 @@
-import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { kv } from '@vercel/kv';
+import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest) {
+interface Capsule {
+  id: string;
+  fid: number;
+  message: string;
+  createdAt: string;
+  unlockDate: string;
+  revealed: boolean;
+}
+
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const fid = searchParams.get("fid");
+    const { searchParams } = new URL(request.url);
+    const fid = searchParams.get('fid');
 
     if (!fid) {
-      return NextResponse.json(
-        { error: "FID required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'FID required' }, { status: 400 });
     }
 
-    // Get user's capsule IDs
+    console.log('Fetching capsules for FID:', fid);
+
     const capsuleIds = await kv.smembers(`user:${fid}:capsules`) || [];
+    
+    console.log('Capsule IDs:', capsuleIds);
 
-    // Fetch all capsules
-    const capsules = [];
-    for (const capsuleId of capsuleIds) {
-      const capsule = await kv.hgetall(`capsule:${capsuleId}`);
-      if (capsule) {
-        capsules.push({
-          id: capsule.id,
-          message: capsule.message,
-          createdAt: parseInt(capsule.createdAt as string),
-          unlockDate: parseInt(capsule.unlockDate as string),
-          revealed: capsule.revealed === "true",
-        });
-      }
+    if (capsuleIds.length === 0) {
+      return NextResponse.json({ capsules: [] });
     }
 
-    // Sort by creation date (newest first)
-    capsules.sort((a, b) => b.createdAt - a.createdAt);
-
-    return NextResponse.json({
-      capsules,
-      total: capsules.length,
-    });
-  } catch (error) {
-    console.error("List capsules error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    const capsules = await Promise.all(
+      capsuleIds.map(async (id) => {
+        const capsule = await kv.get<Capsule>(`capsule:${id}`);
+        return capsule;
+      })
     );
+
+    const validCapsules = capsules
+      .filter((c): c is Capsule => c !== null)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    console.log('Valid capsules:', validCapsules.length);
+
+    return NextResponse.json({ capsules: validCapsules });
+  } catch (error: any) {
+    console.error('List capsules error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to fetch capsules',
+      details: error?.message || 'Unknown error'
+    }, { status: 500 });
   }
 }
