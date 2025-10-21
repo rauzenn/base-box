@@ -1,233 +1,313 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Lock, MessageSquare, Clock, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+
+const durations = [
+  { days: 1, label: '⚡ 1 Day', emoji: '⚡', color: 'from-yellow-500 to-orange-500' },
+  { days: 7, label: '🌙 7 Days', emoji: '🌙', color: 'from-blue-500 to-purple-500' },
+  { days: 30, label: '🎯 30 Days', emoji: '🎯', color: 'from-green-500 to-teal-500' },
+  { days: 90, label: '🚀 90 Days', emoji: '🚀', color: 'from-cyan-500 to-blue-500' },
+  { days: 180, label: '⭐ 180 Days', emoji: '⭐', color: 'from-pink-500 to-red-500' },
+  { days: 365, label: '🔮 365 Days', emoji: '🔮', color: 'from-purple-500 to-indigo-500' }
+];
 
 export default function CreatePage() {
+  const router = useRouter();
+  const fid = 3; // Hardcoded for now
+  
   const [step, setStep] = useState(1);
   const [message, setMessage] = useState('');
-  const [duration, setDuration] = useState(30);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const durationOptions = [
-    { days: 1, label: '1 Day', emoji: '⚡' },
-    { days: 7, label: '1 Week', emoji: '🌙' },
-    { days: 30, label: '1 Month', emoji: '🎯' },
-    { days: 90, label: '3 Months', emoji: '🚀' },
-    { days: 180, label: '6 Months', emoji: '⭐' },
-    { days: 365, label: '1 Year', emoji: '🔮' },
-  ];
+  const maxLength = 500;
+  const remainingChars = maxLength - message.length;
 
-  const calculateUnlockDate = (days: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const handleLockCapsule = async () => {
-    setIsLoading(true);
-    
-    try {
-      const unlockDate = new Date();
-      unlockDate.setDate(unlockDate.getDate() + duration);
-
-      const response = await fetch('/api/capsules/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fid: 3, // Mock FID - gerçekte Farcaster context'ten gelecek
-          message,
-          unlockDate: unlockDate.toISOString(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Success! Redirect to capsules
-        alert('🎉 Capsule locked successfully!');
-        router.push('/capsules');
-      } else {
-        alert('❌ Error: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Lock capsule error:', error);
-      alert('❌ Failed to lock capsule');
-    } finally {
-      setIsLoading(false);
+  const handleNext = () => {
+    if (step === 1 && message.trim().length > 0) {
+      setStep(2);
+    } else if (step === 2 && selectedDuration !== null) {
+      setStep(3);
     }
   };
 
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  const handleCreateCapsule = async () => {
+    if (!message.trim() || selectedDuration === null) {
+      alert('Please complete all fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('🚀 Creating capsule:', { fid, message: message.substring(0, 30), duration: selectedDuration });
+
+      const response = await fetch('/api/capsules/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fid,
+          message: message.trim(),
+          duration: selectedDuration
+        })
+      });
+
+      const data = await response.json();
+      console.log('📦 API Response:', data);
+
+      if (data.success) {
+        console.log('✅ Capsule created successfully!');
+        alert('🎉 Time capsule created successfully!');
+        router.push('/capsules');
+      } else {
+        console.error('❌ Failed to create capsule:', data.message);
+        alert(`Failed to create capsule: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error creating capsule:', error);
+      alert('Error creating capsule. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUnlockDate = () => {
+    if (!selectedDuration) return '';
+    const date = new Date();
+    date.setDate(date.getDate() + selectedDuration);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
   return (
-   <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6 pb-20">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-[#000814] pb-20">
+      {/* Background */}
+      <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
+      <div 
+        className="fixed inset-0 opacity-20"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px'
+        }}
+      />
+
+      <div className="relative z-10 p-6">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-black text-white mb-3">Create Capsule 🔒</h1>
-          <p className="text-gray-400 text-lg">Lock a message for your future self</p>
+        <div className="mb-8">
+          <h1 className="text-4xl font-black text-white mb-2">Create Capsule</h1>
+          <p className="text-gray-400 font-medium">Lock a message for your future self</p>
         </div>
 
         {/* Progress Steps */}
-        <div className="flex justify-center items-center mb-12">
-          {[1, 2, 3].map((s) => (
-            <React.Fragment key={s}>
-              <div className="flex flex-col items-center">
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center font-black text-xl transition-all duration-300 ${
-                  step >= s 
-                    ? 'bg-gradient-to-r from-[#0052FF] to-[#00D395] text-white scale-110 shadow-lg shadow-blue-500/50' 
-                    : 'bg-gray-800 text-gray-600'
-                }`}>
-                  {s}
-                </div>
-                <span className={`text-xs mt-2 font-bold ${step >= s ? 'text-[#0052FF]' : 'text-gray-600'}`}>
-                  {s === 1 ? 'Message' : s === 2 ? 'Duration' : 'Confirm'}
-                </span>
+        <div className="flex items-center justify-center mb-12">
+          {[1, 2, 3].map((num) => (
+            <div key={num} className="flex items-center">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg transition-all ${
+                step >= num
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/50'
+                  : 'bg-[#1A1F2E] text-gray-500'
+              }`}>
+                {step > num ? <Check className="w-6 h-6" /> : num}
               </div>
-              {s < 3 && (
-                <div className={`h-1 w-24 mx-3 rounded transition-all duration-300 ${
-                  step > s ? 'bg-gradient-to-r from-[#0052FF] to-[#00D395]' : 'bg-gray-800'
+              {num < 3 && (
+                <div className={`w-24 h-1 mx-2 transition-all ${
+                  step > num ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : 'bg-[#1A1F2E]'
                 }`} />
               )}
-            </React.Fragment>
+            </div>
           ))}
         </div>
 
         {/* Step 1: Message */}
         {step === 1 && (
-          <div className="bg-[#0A0E14]/90 backdrop-blur-xl rounded-3xl p-8 border-2 border-[#0052FF]/30 shadow-2xl">
+          <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-8 shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-[#0052FF]/20 rounded-xl flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-[#0052FF]" />
-              </div>
+              <Sparkles className="w-8 h-8 text-[#0052FF]" />
               <h2 className="text-2xl font-black text-white">Your Message</h2>
             </div>
-            
+
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Dear future me..."
-              className="w-full h-56 bg-black/60 text-white text-lg rounded-2xl p-6 border-2 border-[#0052FF]/20 focus:border-[#0052FF] transition-all resize-none outline-none placeholder:text-gray-600"
-              maxLength={500}
+              placeholder="Write a message to your future self... What do you want to remember? What are your predictions?"
+              maxLength={maxLength}
+              className="w-full h-64 px-6 py-4 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-[#0052FF] resize-none font-medium text-lg"
             />
-            
-            <div className="flex justify-between items-center mt-6">
-              <span className={`text-sm font-bold ${message.length > 450 ? 'text-[#FFB800]' : 'text-gray-500'}`}>
-                {message.length}/500 characters
-              </span>
-              <button
-                onClick={() => message.length > 10 && setStep(2)}
-                disabled={message.length <= 10}
-                className="bg-gradient-to-r from-[#0052FF] to-[#00D395] text-white px-10 py-4 rounded-xl font-black text-lg hover:shadow-2xl hover:shadow-blue-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all transform hover:scale-105"
-              >
-                Next Step →
-              </button>
+
+            <div className="flex items-center justify-between mt-4">
+              <p className={`text-sm font-bold ${
+                remainingChars < 50 ? 'text-red-500' : 'text-gray-400'
+              }`}>
+                {remainingChars} characters remaining
+              </p>
+              <p className="text-sm text-gray-500">
+                {message.length} / {maxLength}
+              </p>
             </div>
           </div>
         )}
 
         {/* Step 2: Duration */}
         {step === 2 && (
-          <div className="bg-[#0A0E14]/90 backdrop-blur-xl rounded-3xl p-8 border-2 border-[#0052FF]/30 shadow-2xl">
+          <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-8 shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-[#0052FF]/20 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-[#0052FF]" />
-              </div>
+              <Clock className="w-8 h-8 text-[#0052FF]" />
               <h2 className="text-2xl font-black text-white">Lock Duration</h2>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-              {durationOptions.map((opt) => (
+
+            <p className="text-gray-400 font-medium mb-8">
+              How long should this message remain locked?
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              {durations.map((duration) => (
                 <button
-                  key={opt.days}
-                  onClick={() => setDuration(opt.days)}
-                  className={`p-6 rounded-2xl font-bold text-base transition-all transform hover:scale-105 ${
-                    duration === opt.days
-                      ? 'bg-gradient-to-br from-[#0052FF] to-[#00D395] text-white shadow-2xl shadow-blue-500/50'
-                      : 'bg-black/60 text-gray-400 border-2 border-gray-700 hover:border-[#0052FF]/50'
+                  key={duration.days}
+                  onClick={() => setSelectedDuration(duration.days)}
+                  className={`p-6 rounded-2xl border-2 transition-all ${
+                    selectedDuration === duration.days
+                      ? `bg-gradient-to-r ${duration.color} border-transparent shadow-xl text-white`
+                      : 'bg-[#1A1F2E] border-[#0052FF]/20 hover:border-[#0052FF] text-gray-400'
                   }`}
                 >
-                  <div className="text-4xl mb-3">{opt.emoji}</div>
-                  <div className="font-black">{opt.label}</div>
+                  <div className="text-4xl mb-2">{duration.emoji}</div>
+                  <p className="font-black text-lg">{duration.label}</p>
                 </button>
               ))}
-            </div>
-            
-            <div className="flex gap-4">
-              <button
-                onClick={() => setStep(1)}
-                className="flex-1 bg-gray-800 text-white px-6 py-4 rounded-xl font-bold hover:bg-gray-700 transition-all"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={() => setStep(3)}
-                className="flex-1 bg-gradient-to-r from-[#0052FF] to-[#00D395] text-white px-6 py-4 rounded-xl font-black hover:shadow-2xl hover:shadow-blue-500/50 transition-all transform hover:scale-105"
-              >
-                Next Step →
-              </button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Preview */}
+        {/* Step 3: Confirm */}
         {step === 3 && (
-          <div className="bg-[#0A0E14]/90 backdrop-blur-xl rounded-3xl p-8 border-2 border-[#0052FF]/30 shadow-2xl">
+          <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-8 shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-[#0052FF]/20 rounded-xl flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-[#0052FF]" />
-              </div>
+              <Lock className="w-8 h-8 text-[#0052FF]" />
               <h2 className="text-2xl font-black text-white">Review & Lock</h2>
             </div>
-            
-            <div className="bg-gradient-to-br from-[#0052FF]/10 to-[#00D395]/10 rounded-2xl p-6 mb-6 border border-[#0052FF]/30">
-              <div className="bg-black/60 rounded-xl p-6 mb-4">
-                <p className="text-white text-lg leading-relaxed">{message}</p>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[#00D395]">
-                  <Calendar className="w-5 h-5" />
-                  <span className="font-bold">
-                    Unlocks: {calculateUnlockDate(duration)}
-                  </span>
-                </div>
-                <div className="text-[#0052FF] font-bold">
-                  {duration} day{duration > 1 ? 's' : ''}
+
+            <div className="space-y-6">
+              {/* Message Preview */}
+              <div>
+                <label className="block text-sm font-bold text-gray-400 mb-2">Your Message</label>
+                <div className="bg-[#1A1F2E] rounded-2xl p-6">
+                  <p className="text-white font-medium leading-relaxed">{message}</p>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <button
-                onClick={() => setStep(2)}
-                disabled={isLoading}
-                className="flex-1 bg-gray-800 text-white px-6 py-4 rounded-xl font-bold hover:bg-gray-700 transition-all disabled:opacity-50"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleLockCapsule}
-                disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-[#0052FF] to-[#00D395] text-white px-6 py-4 rounded-xl font-black text-lg hover:shadow-2xl hover:shadow-green-500/50 transition-all transform hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Locking...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-5 h-5" />
-                    Lock Capsule
-                  </>
-                )}
-              </button>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-bold text-gray-400 mb-2">Lock Duration</label>
+                <div className="bg-[#1A1F2E] rounded-2xl p-6">
+                  <p className="text-[#0052FF] font-black text-xl">
+                    {durations.find(d => d.days === selectedDuration)?.label}
+                  </p>
+                </div>
+              </div>
+
+              {/* Unlock Date */}
+              <div>
+                <label className="block text-sm font-bold text-gray-400 mb-2">Unlocks On</label>
+                <div className="bg-[#1A1F2E] rounded-2xl p-6 flex items-center gap-3">
+                  <Clock className="w-6 h-6 text-cyan-500" />
+                  <p className="text-cyan-500 font-black text-lg">{getUnlockDate()}</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
+
+        {/* Navigation Buttons */}
+        <div className="flex gap-4 mt-8">
+          {step > 1 && (
+            <button
+              onClick={handleBack}
+              className="flex-1 px-8 py-4 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-xl font-bold text-white hover:border-[#0052FF] transition-all flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back
+            </button>
+          )}
+
+          {step < 3 ? (
+            <button
+              onClick={handleNext}
+              disabled={(step === 1 && !message.trim()) || (step === 2 && selectedDuration === null)}
+              className="flex-1 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              Next
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={handleCreateCapsule}
+              disabled={loading}
+              className="flex-1 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Locking...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-5 h-5" />
+                  Lock Capsule
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0A0E14]/95 backdrop-blur-md border-t-2 border-[#0052FF]/20 z-50">
+        <div className="h-full flex items-center justify-around px-6">
+          <a href="/" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span className="text-xs font-bold">Home</span>
+          </a>
+          <a href="/capsules" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span className="text-xs font-bold">Capsules</span>
+          </a>
+          <a href="/create" className="flex flex-col items-center gap-1 text-[#0052FF]">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="text-xs font-bold">Create</span>
+          </a>
+          <a href="/reveals" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
+            <span className="text-xs font-bold">Reveals</span>
+          </a>
+          <a href="/profile" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="text-xs font-bold">Profile</span>
+          </a>
+        </div>
+      </nav>
     </div>
   );
 }
