@@ -1,3 +1,5 @@
+console.log('🟢 CREATE ROUTE LOADED');
+
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
@@ -5,9 +7,11 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
+  console.log('🔵 CREATE ENDPOINT HIT!');
+  
   try {
     const body = await request.json();
-    console.log('📥 Create request:', body);
+    console.log('📥 Received:', JSON.stringify(body));
     
     const { fid, message, unlockDate } = body;
 
@@ -26,16 +30,16 @@ export async function POST(request: Request) {
       revealed: false,
     };
 
-    console.log('💾 Saving capsule:', capsule);
+    console.log('💾 Saving capsule:', capsuleId);
 
     await kv.set(`capsule:${capsuleId}`, capsule);
     await kv.sadd(`user:${fid}:capsules`, capsuleId);
 
-    console.log('✅ Capsule saved!');
+    console.log('✅ SUCCESS! Capsule saved');
 
     return NextResponse.json({ success: true, capsule });
   } catch (error: any) {
-    console.error('❌ Create error:', error);
+    console.error('❌ CREATE ERROR:', error);
     return NextResponse.json({ 
       error: 'Failed to create capsule',
       details: error?.message 

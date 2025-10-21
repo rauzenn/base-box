@@ -59,7 +59,7 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6 pb-20">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-black text-white mb-2">Profile</h1>

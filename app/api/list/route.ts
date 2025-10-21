@@ -1,3 +1,5 @@
+console.log('🟢 LIST ROUTE LOADED');
+
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
@@ -14,6 +16,8 @@ interface Capsule {
 }
 
 export async function GET(request: Request) {
+  console.log('🔵 LIST ENDPOINT HIT!');
+  
   try {
     const { searchParams } = new URL(request.url);
     const fid = searchParams.get('fid');
@@ -22,16 +26,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'FID required' }, { status: 400 });
     }
 
-    console.log('Fetching capsules for FID:', fid);
+    console.log('📥 Fetching capsules for FID:', fid);
 
+    // Get user's capsule IDs
     const capsuleIds = await kv.smembers(`user:${fid}:capsules`) || [];
     
-    console.log('Capsule IDs:', capsuleIds);
+    console.log('📦 Found capsule IDs:', capsuleIds);
 
     if (capsuleIds.length === 0) {
+      console.log('ℹ️ No capsules found');
       return NextResponse.json({ capsules: [] });
     }
 
+    // Get all capsule data
     const capsules = await Promise.all(
       capsuleIds.map(async (id) => {
         const capsule = await kv.get<Capsule>(`capsule:${id}`);
@@ -39,18 +46,19 @@ export async function GET(request: Request) {
       })
     );
 
+    // Filter out null values and sort by creation date
     const validCapsules = capsules
       .filter((c): c is Capsule => c !== null)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    console.log('Valid capsules:', validCapsules.length);
+    console.log('✅ Returning', validCapsules.length, 'capsules');
 
     return NextResponse.json({ capsules: validCapsules });
   } catch (error: any) {
-    console.error('List capsules error:', error);
+    console.error('❌ LIST ERROR:', error);
     return NextResponse.json({ 
       error: 'Failed to fetch capsules',
-      details: error?.message || 'Unknown error'
+      details: error?.message 
     }, { status: 500 });
   }
 }

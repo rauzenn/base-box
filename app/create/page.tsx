@@ -61,7 +61,7 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6 pb-28">
+   <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6 pb-20">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">

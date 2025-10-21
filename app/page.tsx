@@ -23,7 +23,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6 pb-28">
+    <div className="min-h-screen bg-gradient-to-b from-[#000814] to-[#001428] p-6 pb-20">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12 pt-8">
