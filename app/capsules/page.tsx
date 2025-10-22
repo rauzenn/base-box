@@ -8,6 +8,8 @@ interface Capsule {
   id: string;
   fid: number;
   message: string;
+  image?: string;
+  imageType?: string;
   createdAt: string;
   unlockDate: string;
   revealed: boolean;

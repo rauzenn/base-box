@@ -7,6 +7,8 @@ interface Capsule {
   id: string;
   fid: number;
   message: string;
+  image?: string;
+  imageType?: string;
   createdAt: string;
   unlockDate: string;
   revealed: boolean;
@@ -15,11 +17,11 @@ interface Capsule {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log('📥 Received data:', body);
+    console.log('📥 Received data:', { ...body, image: body.image ? 'IMAGE_DATA' : null });
 
-    const { fid, message, duration } = body;
+    const { fid, message, duration, image, imageType } = body;
 
-    // Validation with detailed logging
+    // Validation
     if (!fid) {
       console.error('❌ Missing: fid');
       return NextResponse.json(
@@ -44,7 +46,23 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('✅ Validation passed:', { fid, message: message.substring(0, 30), duration });
+    // Validate image size (5MB limit)
+    if (image) {
+      const imageSizeInBytes = (image.length * 3) / 4; // Base64 to bytes
+      const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+      
+      if (imageSizeInBytes > maxSizeInBytes) {
+        console.error('❌ Image too large:', imageSizeInBytes, 'bytes');
+        return NextResponse.json(
+          { success: false, message: 'Image size must be under 5MB' },
+          { status: 400 }
+        );
+      }
+      
+      console.log('✅ Image size validated:', (imageSizeInBytes / 1024 / 1024).toFixed(2), 'MB');
+    }
+
+    console.log('✅ Validation passed:', { fid, message: message.substring(0, 30), duration, hasImage: !!image });
 
     // Generate unique capsule ID
     const timestamp = Date.now();
@@ -66,13 +84,20 @@ export async function POST(request: Request) {
       revealed: false
     };
 
-    console.log('📦 Capsule object:', capsule);
+    // Add image if provided
+    if (image && imageType) {
+      capsule.image = image;
+      capsule.imageType = imageType;
+      console.log('📸 Image attached to capsule:', imageType);
+    }
+
+    console.log('📦 Capsule object created');
 
     // Save capsule to KV
     await kv.set(`capsule:${capsuleId}`, capsule);
     console.log(`✅ Saved to capsule:${capsuleId}`);
 
-    // CRITICAL: Add capsule ID to user's set
+    // Add capsule ID to user's set
     await kv.sadd(`user:${fid}:capsules`, capsuleId);
     console.log(`✅ Added to user:${fid}:capsules set`);
 
@@ -82,7 +107,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      capsule,
+      capsule: {
+        ...capsule,
+        // Don't send full image data back, just confirmation
+        image: capsule.image ? 'IMAGE_ATTACHED' : undefined
+      },
       message: 'Capsule created successfully'
     });
 

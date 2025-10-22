@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X } from 'lucide-react';
 import { useRipple, createSparkles, createConfetti } from '@/components/animations/effects';
 
 const durations = [
@@ -18,14 +18,62 @@ export default function CreatePage() {
   const router = useRouter();
   const fid = 3;
   const createRipple = useRipple();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [step, setStep] = useState(1);
   const [message, setMessage] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Image state
+  const [image, setImage] = useState<string | null>(null);
+  const [imageType, setImageType] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const maxLength = 500;
   const remainingChars = maxLength - message.length;
+  const maxImageSize = 5 * 1024 * 1024; // 5MB
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageError(null);
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setImageError('Please select an image file');
+      return;
+    }
+
+    // Validate file size
+    if (file.size > maxImageSize) {
+      setImageError('Image must be under 5MB');
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setImage(base64);
+      setImageType(file.type);
+      console.log('📸 Image loaded:', file.type, (file.size / 1024 / 1024).toFixed(2), 'MB');
+    };
+    reader.onerror = () => {
+      setImageError('Failed to load image');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImage(null);
+    setImageType(null);
+    setImageError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleNext = () => {
     if (step === 1 && message.trim().length > 0) {
@@ -47,18 +95,31 @@ export default function CreatePage() {
 
     try {
       setLoading(true);
-      console.log('🚀 Creating capsule:', { fid, message: message.substring(0, 30), duration: selectedDuration });
+      console.log('🚀 Creating capsule with image:', { 
+        fid, 
+        message: message.substring(0, 30), 
+        duration: selectedDuration,
+        hasImage: !!image 
+      });
+
+      const payload: any = {
+        fid,
+        message: message.trim(),
+        duration: selectedDuration
+      };
+
+      // Add image if exists
+      if (image && imageType) {
+        payload.image = image;
+        payload.imageType = imageType;
+      }
 
       const response = await fetch('/api/capsules/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          fid,
-          message: message.trim(),
-          duration: selectedDuration
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
@@ -116,10 +177,10 @@ export default function CreatePage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-black text-white mb-2">Create Capsule</h1>
-          <p className="text-gray-400 font-medium">Lock a message for your future self</p>
+          <p className="text-gray-400 font-medium">Lock a message & memory for your future self</p>
         </div>
 
-        {/* Progress Steps with Animation */}
+        {/* Progress Steps */}
         <div className="flex items-center justify-center mb-12">
           {[1, 2, 3].map((num) => (
             <div key={num} className="flex items-center">
@@ -139,23 +200,24 @@ export default function CreatePage() {
           ))}
         </div>
 
-        {/* Step 1: Message */}
+        {/* Step 1: Message & Image */}
         {step === 1 && (
           <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-8 shadow-2xl card-hover">
             <div className="flex items-center gap-3 mb-6">
               <Sparkles className="w-8 h-8 text-[#0052FF]" />
-              <h2 className="text-2xl font-black text-white">Your Message</h2>
+              <h2 className="text-2xl font-black text-white">Your Message & Memory</h2>
             </div>
 
+            {/* Message Input */}
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Write a message to your future self... What do you want to remember? What are your predictions?"
               maxLength={maxLength}
-              className="w-full h-64 px-6 py-4 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-[#0052FF] focus:ring-2 focus:ring-[#0052FF]/20 resize-none font-medium text-lg transition-all"
+              className="w-full h-48 px-6 py-4 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-[#0052FF] focus:ring-2 focus:ring-[#0052FF]/20 resize-none font-medium text-lg transition-all mb-4"
             />
 
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center justify-between mb-6">
               <p className={`text-sm font-bold transition-all ${
                 remainingChars < 50 ? 'text-red-500 bounce' : 'text-gray-400'
               }`}>
@@ -164,6 +226,65 @@ export default function CreatePage() {
               <p className="text-sm text-gray-500">
                 {message.length} / {maxLength}
               </p>
+            </div>
+
+            {/* Image Upload Section */}
+            <div className="border-t-2 border-gray-800 pt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <ImageIcon className="w-6 h-6 text-cyan-500" />
+                <h3 className="text-lg font-black text-white">Add a Memory (Optional)</h3>
+              </div>
+              <p className="text-sm text-gray-400 mb-4">
+                📸 Attach a photo, screenshot, or image to your time capsule (max 5MB)
+              </p>
+
+              {/* Image Preview or Upload Button */}
+              {image ? (
+                <div className="relative card-hover">
+                  <img 
+                    src={image} 
+                    alt="Capsule memory" 
+                    className="w-full h-64 object-cover rounded-2xl border-2 border-cyan-500/30"
+                  />
+                  <button
+                    onClick={removeImage}
+                    className="absolute top-4 right-4 w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-xl transition-all btn-lift"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                  <div className="absolute bottom-4 left-4 px-4 py-2 bg-black/70 backdrop-blur-sm rounded-lg">
+                    <p className="text-xs text-white font-bold">
+                      ✅ Image attached
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-6 border-2 border-dashed border-[#0052FF]/30 hover:border-[#0052FF] rounded-2xl transition-all btn-lift flex flex-col items-center gap-3 bg-[#1A1F2E]/50"
+                  >
+                    <ImageIcon className="w-12 h-12 text-[#0052FF]" />
+                    <div>
+                      <p className="text-white font-bold mb-1">Click to upload image</p>
+                      <p className="text-sm text-gray-500">JPG, PNG, GIF, WebP (max 5MB)</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {imageError && (
+                <div className="mt-4 p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl">
+                  <p className="text-red-500 text-sm font-bold">⚠️ {imageError}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -221,8 +342,22 @@ export default function CreatePage() {
                 </div>
               </div>
 
+              {/* Image Preview */}
+              {image && (
+                <div className="fade-in-up" style={{ animationDelay: '0.1s' }}>
+                  <label className="block text-sm font-bold text-gray-400 mb-2">Your Memory</label>
+                  <div className="card-hover">
+                    <img 
+                      src={image} 
+                      alt="Capsule memory" 
+                      className="w-full h-64 object-cover rounded-2xl border-2 border-cyan-500/30"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Duration */}
-              <div className="fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="fade-in-up" style={{ animationDelay: image ? '0.2s' : '0.1s' }}>
                 <label className="block text-sm font-bold text-gray-400 mb-2">Lock Duration</label>
                 <div className="bg-[#1A1F2E] rounded-2xl p-6 card-hover">
                   <p className="text-[#0052FF] font-black text-xl">
@@ -232,7 +367,7 @@ export default function CreatePage() {
               </div>
 
               {/* Unlock Date */}
-              <div className="fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="fade-in-up" style={{ animationDelay: image ? '0.3s' : '0.2s' }}>
                 <label className="block text-sm font-bold text-gray-400 mb-2">Unlocks On</label>
                 <div className="bg-[#1A1F2E] rounded-2xl p-6 flex items-center gap-3 card-hover">
                   <Clock className="w-6 h-6 text-cyan-500" />
