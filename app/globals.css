@@ -3,7 +3,18 @@
 @tailwind utilities;
 
 /* ========================================
-   🎨 BASE BOX ANIMATIONS
+   🎨 BASE BOX CUSTOM STYLES
+   ======================================== */
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #000814;
+  color: white;
+  overflow-x: hidden;
+}
+
+/* ========================================
+   🎨 ANIMATIONS
    ======================================== */
 
 /* Ripple Effect on Click */
@@ -377,4 +388,22 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0E14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0052FF;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00D395;
 }

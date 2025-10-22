@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Lock, Unlock, Clock } from 'lucide-react';
+import { useRipple, createSparkles, playRevealAnimation } from '@/components/animations/effects';
 
 interface Capsule {
   id: string;
@@ -12,7 +13,6 @@ interface Capsule {
   revealed: boolean;
 }
 
-// Inline Countdown Component
 function CountdownTimer({ unlockDate }: { unlockDate: string }) {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -54,6 +54,7 @@ function CountdownTimer({ unlockDate }: { unlockDate: string }) {
 
 export default function CapsulesPage() {
   const fid = 3;
+  const createRipple = useRipple();
   
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +84,18 @@ export default function CapsulesPage() {
     }
   };
 
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>, capsule: Capsule) => {
+    const card = e.currentTarget;
+    
+    // Ripple effect
+    createRipple(e);
+    
+    // If revealed, show sparkles
+    if (capsule.revealed) {
+      createSparkles(card, 8);
+    }
+  };
+
   const filteredCapsules = capsules.filter(capsule => {
     if (filter === 'locked') return !capsule.revealed;
     if (filter === 'revealed') return capsule.revealed;
@@ -104,7 +117,7 @@ export default function CapsulesPage() {
         }}
       />
 
-      <div className="relative z-10">
+      <div className="relative z-10 fade-in-up">
         {/* Header */}
         <div className="p-6">
           <h1 className="text-3xl font-black text-white mb-2">My Capsules</h1>
@@ -115,8 +128,11 @@ export default function CapsulesPage() {
         <div className="px-6 mb-6">
           <div className="flex gap-2 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-2">
             <button
-              onClick={() => setFilter('all')}
-              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
+              onClick={(e) => {
+                createRipple(e);
+                setFilter('all');
+              }}
+              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all btn-lift relative overflow-hidden ${
                 filter === 'all'
                   ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
                   : 'text-gray-400 hover:text-white'
@@ -125,8 +141,11 @@ export default function CapsulesPage() {
               All
             </button>
             <button
-              onClick={() => setFilter('locked')}
-              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
+              onClick={(e) => {
+                createRipple(e);
+                setFilter('locked');
+              }}
+              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all btn-lift relative overflow-hidden ${
                 filter === 'locked'
                   ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
                   : 'text-gray-400 hover:text-white'
@@ -135,8 +154,11 @@ export default function CapsulesPage() {
               Locked
             </button>
             <button
-              onClick={() => setFilter('revealed')}
-              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
+              onClick={(e) => {
+                createRipple(e);
+                setFilter('revealed');
+              }}
+              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all btn-lift relative overflow-hidden ${
                 filter === 'revealed'
                   ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
                   : 'text-gray-400 hover:text-white'
@@ -155,8 +177,8 @@ export default function CapsulesPage() {
               <p className="text-gray-400 font-medium">Loading capsules...</p>
             </div>
           ) : filteredCapsules.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <div className="text-center py-20 fade-in-up">
+              <div className="w-24 h-24 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl flex items-center justify-center mx-auto mb-6 pulse">
                 <Lock className="w-12 h-12 text-[#0052FF]" />
               </div>
               <h2 className="text-2xl font-black text-white mb-3">No Capsules Found</h2>
@@ -167,25 +189,28 @@ export default function CapsulesPage() {
               </p>
               <a
                 href="/create"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all"
+                onClick={(e) => createRipple(e as any)}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all btn-lift relative overflow-hidden"
               >
                 Create Capsule
               </a>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
-              {filteredCapsules.map((capsule) => (
+              {filteredCapsules.map((capsule, index) => (
                 <div
                   key={capsule.id}
-                  className={`bg-[#0A0E14]/60 backdrop-blur-md border-2 rounded-2xl p-6 shadow-xl transition-all hover:scale-[1.02] ${
+                  onClick={(e) => handleCardClick(e, capsule)}
+                  className={`stagger-item card-hover interactive relative overflow-hidden bg-[#0A0E14]/60 backdrop-blur-md border-2 rounded-2xl p-6 shadow-xl transition-all cursor-pointer ${
                     capsule.revealed
-                      ? 'border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/20'
-                      : 'border-[#0052FF]/30 hover:border-[#0052FF]/50 hover:shadow-[#0052FF]/20'
+                      ? 'border-green-500/30 hover:border-green-500/50'
+                      : 'border-[#0052FF]/30 hover:border-[#0052FF]/50'
                   }`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   {/* Icon & Status */}
                   <div className="flex items-center justify-between mb-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
                       capsule.revealed
                         ? 'bg-green-500/20'
                         : 'bg-[#0052FF]/20'
@@ -197,7 +222,7 @@ export default function CapsulesPage() {
                       )}
                     </div>
                     
-                    <div className={`px-4 py-2 rounded-lg font-bold text-sm ${
+                    <div className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
                       capsule.revealed
                         ? 'bg-green-500/20 text-green-500 border border-green-500/30'
                         : 'bg-[#0052FF]/20 text-[#0052FF] border border-[#0052FF]/30'
@@ -244,31 +269,31 @@ export default function CapsulesPage() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0A0E14]/95 backdrop-blur-md border-t-2 border-[#0052FF]/20 z-50">
         <div className="h-full flex items-center justify-around px-6">
-          <a href="/" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+          <a href="/" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
             <span className="text-xs font-bold">Home</span>
           </a>
-          <a href="/capsules" className="flex flex-col items-center gap-1 text-[#0052FF]">
+          <a href="/capsules" className="flex flex-col items-center gap-1 text-[#0052FF] scale-hover">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
             <span className="text-xs font-bold">Capsules</span>
           </a>
-          <a href="/create" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+          <a href="/create" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             <span className="text-xs font-bold">Create</span>
           </a>
-          <a href="/reveals" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+          <a href="/reveals" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
             </svg>
             <span className="text-xs font-bold">Reveals</span>
           </a>
-          <a href="/profile" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+          <a href="/profile" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
