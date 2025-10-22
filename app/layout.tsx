@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
+import "/Users/han/Desktop/base-box/app/globals.css";
 import { BaseBoxBackground } from "@/components/ui/base-box-background";
 import { BottomNav } from "@/components/ui/bottom-nav";
 
