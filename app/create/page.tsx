@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X } from 'lucide-react';
 import { useRipple, createSparkles, createConfetti } from '@/components/animations/effects';
+import { AchievementToast, useAchievements } from '/Users/han/Desktop/base-box/components/ui/achievement-toast';
 
 const durations = [
   { days: 1, label: '⚡ 1 Day', emoji: '⚡', color: 'from-yellow-500 to-orange-500' },
@@ -19,6 +20,7 @@ export default function CreatePage() {
   const fid = 3;
   const createRipple = useRipple();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { newAchievement, checkAchievements, clearAchievement } = useAchievements(fid);
   
   const [step, setStep] = useState(1);
   const [message, setMessage] = useState('');
@@ -131,6 +133,11 @@ export default function CreatePage() {
         // Epic success animation!
         createConfetti(60);
         createSparkles(document.body, 24);
+
+        // Check for new achievements
+        setTimeout(async () => {
+          await checkAchievements();
+        }, 1000);
         
         setTimeout(() => {
           router.push('/capsules');
@@ -172,6 +179,9 @@ export default function CreatePage() {
           backgroundSize: '50px 50px'
         }}
       />
+
+      {/* Achievement Toast */}
+      <AchievementToast achievement={newAchievement} onClose={clearAchievement} />
 
       <div className="relative z-10 p-6 fade-in-up">
         {/* Header */}
@@ -240,18 +250,25 @@ export default function CreatePage() {
 
               {/* Image Preview or Upload Button */}
               {image ? (
-                <div className="relative card-hover">
-                  <img 
-                    src={image} 
-                    alt="Capsule memory" 
-                    className="w-full h-64 object-cover rounded-2xl border-2 border-cyan-500/30"
-                  />
+                <div className="relative card-hover rounded-2xl overflow-hidden border-2 border-cyan-500/30">
+                  {/* FIXED: 16:9 Aspect Ratio Container */}
+                  <div className="relative w-full bg-[#1A1F2E]" style={{ paddingBottom: '56.25%' }}>
+                    <img 
+                      src={image} 
+                      alt="Capsule memory" 
+                      className="absolute inset-0 w-full h-full object-contain"
+                    />
+                  </div>
+                  
+                  {/* Remove Button */}
                   <button
                     onClick={removeImage}
-                    className="absolute top-4 right-4 w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-xl transition-all btn-lift"
+                    className="absolute top-4 right-4 w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-xl transition-all btn-lift z-10"
                   >
                     <X className="w-5 h-5 text-white" />
                   </button>
+                  
+                  {/* Image Info Badge */}
                   <div className="absolute bottom-4 left-4 px-4 py-2 bg-black/70 backdrop-blur-sm rounded-lg">
                     <p className="text-xs text-white font-bold">
                       ✅ Image attached
@@ -342,16 +359,19 @@ export default function CreatePage() {
                 </div>
               </div>
 
-              {/* Image Preview */}
+              {/* Image Preview - FIXED */}
               {image && (
                 <div className="fade-in-up" style={{ animationDelay: '0.1s' }}>
                   <label className="block text-sm font-bold text-gray-400 mb-2">Your Memory</label>
-                  <div className="card-hover">
-                    <img 
-                      src={image} 
-                      alt="Capsule memory" 
-                      className="w-full h-64 object-cover rounded-2xl border-2 border-cyan-500/30"
-                    />
+                  <div className="card-hover rounded-2xl overflow-hidden border-2 border-cyan-500/30">
+                    {/* FIXED: 16:9 Aspect Ratio Container */}
+                    <div className="relative w-full bg-[#1A1F2E]" style={{ paddingBottom: '56.25%' }}>
+                      <img 
+                        src={image} 
+                        alt="Capsule memory" 
+                        className="absolute inset-0 w-full h-full object-contain"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock, Unlock, Clock } from 'lucide-react';
-import { useRipple, createSparkles, playRevealAnimation } from '@/components/animations/effects';
+import { Lock, Clock, Calendar, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { useRipple, createSparkles } from '@/components/animations/effects';
+import BottomNav from '@/components/ui/bottom-nav';
 
 interface Capsule {
   id: string;
@@ -15,98 +16,84 @@ interface Capsule {
   revealed: boolean;
 }
 
-function CountdownTimer({ unlockDate }: { unlockDate: string }) {
-  const [timeLeft, setTimeLeft] = useState('');
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const target = new Date(unlockDate).getTime();
-      const diff = target - now;
-
-      if (diff <= 0) {
-        return '🔓 Unlocked!';
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-      if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-      return `${minutes}m ${seconds}s`;
-    };
-
-    setTimeLeft(calculateTimeLeft());
-    const interval = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [unlockDate]);
-
-  return (
-    <div className="flex items-center gap-2 text-[#0052FF]">
-      <Clock className="w-5 h-5" />
-      <span className="text-lg font-black">{timeLeft}</span>
-    </div>
-  );
-}
+type FilterType = 'all' | 'locked' | 'revealed';
 
 export default function CapsulesPage() {
   const fid = 3;
   const createRipple = useRipple();
-  
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'locked' | 'revealed'>('all');
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('📦 Fetching capsules for FID:', fid);
     fetchCapsules();
   }, []);
 
   const fetchCapsules = async () => {
     try {
-      setLoading(true);
       const response = await fetch(`/api/capsules/list?fid=${fid}`);
       const data = await response.json();
 
-      if (data.success && data.capsules) {
-        console.log('✅ Loaded capsules:', data.capsules);
+      if (data.success) {
+        console.log('📦 Fetched capsules:', data.capsules);
         setCapsules(data.capsules);
-      } else {
-        console.error('❌ Failed to load capsules:', data.message);
       }
     } catch (error) {
-      console.error('❌ Error fetching capsules:', error);
+      console.error('Failed to fetch capsules:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>, capsule: Capsule) => {
-    const card = e.currentTarget;
-    
-    // Ripple effect
-    createRipple(e);
-    
-    // If revealed, show sparkles
-    if (capsule.revealed) {
-      createSparkles(card, 8);
-    }
-  };
-
-  const filteredCapsules = capsules.filter(capsule => {
-    if (filter === 'locked') return !capsule.revealed;
-    if (filter === 'revealed') return capsule.revealed;
+  const filteredCapsules = capsules.filter((capsule) => {
+    if (filter === 'all') return true;
+    if (filter === 'locked') return !capsule.revealed && new Date(capsule.unlockDate) > new Date();
+    if (filter === 'revealed') return capsule.revealed || new Date(capsule.unlockDate) <= new Date();
     return true;
   });
 
+  const getTimeRemaining = (unlockDate: string) => {
+    const now = new Date().getTime();
+    const unlock = new Date(unlockDate).getTime();
+    const diff = unlock - now;
+
+    if (diff <= 0) return 'Ready to unlock!';
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+    if (days > 0) return `${days}d ${hours}h remaining`;
+    return `${hours}h remaining`;
+  };
+
+  const isUnlocked = (capsule: Capsule) => {
+    return capsule.revealed || new Date(capsule.unlockDate) <= new Date();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#000814] pb-24">
+        <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
+        <div className="fixed inset-0 opacity-20" style={{
+          backgroundImage: `linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }} />
+        
+        <div className="relative z-10 flex items-center justify-center h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
+            <p className="text-gray-400 font-bold">Loading capsules...</p>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#000814] pb-20">
-      {/* Background */}
+    <div className="min-h-screen bg-[#000814] pb-24">
+      {/* Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
       <div 
         className="fixed inset-0 opacity-20"
@@ -119,190 +106,261 @@ export default function CapsulesPage() {
         }}
       />
 
-      <div className="relative z-10 fade-in-up">
+      <div className="relative z-10 p-6 fade-in-up">
         {/* Header */}
-        <div className="p-6">
-          <h1 className="text-3xl font-black text-white mb-2">My Capsules</h1>
-          <p className="text-gray-400 font-medium">FID: {fid}</p>
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-4xl font-black text-white flex items-center gap-3">
+              <Lock className="w-8 h-8 text-[#0052FF]" />
+              My Capsules
+            </h1>
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-full">
+              <Calendar className="w-4 h-4 text-[#0052FF]" />
+              <span className="text-white font-bold text-sm">{capsules.length} total</span>
+            </div>
+          </div>
+          <p className="text-gray-400 font-medium">Your locked messages & memories</p>
         </div>
 
         {/* Filter Tabs */}
-        <div className="px-6 mb-6">
-          <div className="flex gap-2 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-2">
-            <button
-              onClick={(e) => {
-                createRipple(e);
-                setFilter('all');
-              }}
-              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all btn-lift relative overflow-hidden ${
-                filter === 'all'
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={(e) => {
-                createRipple(e);
-                setFilter('locked');
-              }}
-              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all btn-lift relative overflow-hidden ${
-                filter === 'locked'
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Locked
-            </button>
-            <button
-              onClick={(e) => {
-                createRipple(e);
-                setFilter('revealed');
-              }}
-              className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all btn-lift relative overflow-hidden ${
-                filter === 'revealed'
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Revealed
-            </button>
-          </div>
+        <div className="flex items-center gap-3 mb-8 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-2">
+          <Sparkles className="w-5 h-5 text-gray-500 ml-2" />
+          {(['all', 'locked', 'revealed'] as FilterType[]).map((type) => {
+            const count = type === 'all' 
+              ? capsules.length
+              : type === 'locked'
+              ? capsules.filter(c => !isUnlocked(c)).length
+              : capsules.filter(c => isUnlocked(c)).length;
+
+            return (
+              <button
+                key={type}
+                onClick={(e) => {
+                  createRipple(e);
+                  setFilter(type);
+                }}
+                className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all relative overflow-hidden ${
+                  filter === type
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-xl shadow-blue-500/30'
+                    : 'text-gray-400 hover:text-white hover:bg-[#1A1F2E]'
+                }`}
+              >
+                {type === 'all' && `All (${count})`}
+                {type === 'locked' && `Locked (${count})`}
+                {type === 'revealed' && `Revealed (${count})`}
+              </button>
+            );
+          })}
         </div>
 
         {/* Capsules Grid */}
-        <div className="px-6">
-          {loading ? (
-            <div className="text-center py-20">
-              <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-400 font-medium">Loading capsules...</p>
+        {filteredCapsules.length === 0 ? (
+          <div className="text-center py-20 fade-in-up">
+            <div className="w-24 h-24 bg-[#1A1F2E] rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-12 h-12 text-gray-600" />
             </div>
-          ) : filteredCapsules.length === 0 ? (
-            <div className="text-center py-20 fade-in-up">
-              <div className="w-24 h-24 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl flex items-center justify-center mx-auto mb-6 pulse">
-                <Lock className="w-12 h-12 text-[#0052FF]" />
-              </div>
-              <h2 className="text-2xl font-black text-white mb-3">No Capsules Found</h2>
-              <p className="text-gray-400 font-medium mb-8">
-                {filter === 'locked' && 'You have no locked capsules.'}
-                {filter === 'revealed' && 'You have no revealed capsules yet.'}
-                {filter === 'all' && 'Create your first time capsule!'}
-              </p>
-              <a
-                href="/create"
-                onClick={(e) => createRipple(e as any)}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all btn-lift relative overflow-hidden"
-              >
-                Create Capsule
-              </a>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
-              {filteredCapsules.map((capsule, index) => (
-                <div
-                  key={capsule.id}
-                  onClick={(e) => handleCardClick(e, capsule)}
-                  className={`stagger-item card-hover interactive relative overflow-hidden bg-[#0A0E14]/60 backdrop-blur-md border-2 rounded-2xl p-6 shadow-xl transition-all cursor-pointer ${
-                    capsule.revealed
-                      ? 'border-green-500/30 hover:border-green-500/50'
-                      : 'border-[#0052FF]/30 hover:border-[#0052FF]/50'
-                  }`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  {/* Icon & Status */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                      capsule.revealed
-                        ? 'bg-green-500/20'
-                        : 'bg-[#0052FF]/20'
-                    }`}>
-                      {capsule.revealed ? (
-                        <Unlock className="w-7 h-7 text-green-500" />
-                      ) : (
-                        <Lock className="w-7 h-7 text-[#0052FF]" />
-                      )}
-                    </div>
-                    
-                    <div className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-                      capsule.revealed
-                        ? 'bg-green-500/20 text-green-500 border border-green-500/30'
-                        : 'bg-[#0052FF]/20 text-[#0052FF] border border-[#0052FF]/30'
-                    }`}>
-                      {capsule.revealed ? '🔓 REVEALED' : '🔒 LOCKED'}
-                    </div>
-                  </div>
-
-                  {/* Message Preview */}
-                  <div className="mb-4">
-                    <p className="text-white font-bold text-lg line-clamp-2">
-                      {capsule.message}
-                    </p>
-                  </div>
-
-                  {/* Countdown or Revealed Date */}
-                  {capsule.revealed ? (
-                    <div className="flex items-center gap-2 text-green-500">
-                      <Clock className="w-4 h-4" />
-                      <p className="text-sm font-medium">
-                        Revealed: {new Date(capsule.unlockDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-[#1A1F2E] rounded-xl p-4">
-                      <CountdownTimer unlockDate={capsule.unlockDate} />
-                    </div>
-                  )}
-
-                  {/* Metadata */}
-                  <div className="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between">
-                    <p className="text-xs text-gray-500 font-mono">ID: {capsule.id}</p>
-                    <p className="text-xs text-gray-500">
-                      Created: {new Date(capsule.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+            <h3 className="text-2xl font-black text-white mb-2">No capsules found</h3>
+            <p className="text-gray-400 mb-8">
+              {filter === 'all'
+                ? 'Create your first time capsule!'
+                : `No ${filter} capsules yet.`}
+            </p>
+            <a
+              href="/create"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-xl shadow-xl hover:shadow-blue-500/50 transition-all btn-lift"
+            >
+              <Lock className="w-5 h-5" />
+              Create Capsule
+            </a>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCapsules.map((capsule, index) => (
+              <CapsuleCard
+                key={capsule.id}
+                capsule={capsule}
+                index={index}
+                isUnlocked={isUnlocked(capsule)}
+                getTimeRemaining={getTimeRemaining}
+                onImageClick={setSelectedImage}
+                createRipple={createRipple}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Image Modal */}
+      {selectedImage && (
+        <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />
+      )}
+
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0A0E14]/95 backdrop-blur-md border-t-2 border-[#0052FF]/20 z-50">
-        <div className="h-full flex items-center justify-around px-6">
-          <a href="/" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="text-xs font-bold">Home</span>
-          </a>
-          <a href="/capsules" className="flex flex-col items-center gap-1 text-[#0052FF] scale-hover">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <span className="text-xs font-bold">Capsules</span>
-          </a>
-          <a href="/create" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="text-xs font-bold">Create</span>
-          </a>
-          <a href="/reveals" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-            </svg>
-            <span className="text-xs font-bold">Reveals</span>
-          </a>
-          <a href="/profile" className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all scale-hover">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="text-xs font-bold">Profile</span>
-          </a>
+      <BottomNav />
+    </div>
+  );
+}
+
+// Capsule Card Component
+function CapsuleCard({
+  capsule,
+  index,
+  isUnlocked,
+  getTimeRemaining,
+  onImageClick,
+  createRipple,
+}: {
+  capsule: any;
+  index: number;
+  isUnlocked: boolean;
+  getTimeRemaining: (date: string) => string;
+  onImageClick: (image: string) => void;
+  createRipple: any;
+}) {
+  return (
+    <div
+      className={`stagger-item bg-[#0A0E14]/60 backdrop-blur-md border-2 rounded-2xl overflow-hidden transition-all card-hover ${
+        isUnlocked
+          ? 'border-green-500/30 shadow-xl shadow-green-500/10'
+          : 'border-[#0052FF]/20 hover:border-[#0052FF]/40'
+      }`}
+      style={{ animationDelay: `${index * 0.1}s` }}
+    >
+      {/* Image Thumbnail */}
+      {capsule.image && (
+        <div
+          onClick={() => isUnlocked && onImageClick(capsule.image!)}
+          className="relative w-full bg-[#1A1F2E] cursor-pointer group overflow-hidden"
+          style={{ paddingBottom: '56.25%' }}
+        >
+          <img
+            src={capsule.image}
+            alt="Capsule memory"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          />
+          
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </div>
+
+          {/* Locked Overlay */}
+          {!isUnlocked && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-center">
+                <Lock className="w-8 h-8 text-white mx-auto mb-2" />
+                <p className="text-white text-sm font-bold">Locked</p>
+              </div>
+            </div>
+          )}
+
+          {/* Photo Badge */}
+          <div className="absolute top-3 right-3 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg border border-cyan-500/30">
+            <div className="flex items-center gap-1.5 text-xs text-cyan-400 font-bold">
+              <ImageIcon className="w-3.5 h-3.5" />
+              Photo
+            </div>
+          </div>
         </div>
-      </nav>
+      )}
+
+      {/* Card Content */}
+      <div className="p-5 space-y-4">
+        {/* Status Badge */}
+        <div className="flex items-center justify-between">
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border-2 ${
+              isUnlocked
+                ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+            }`}
+          >
+            {isUnlocked ? (
+              <>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                Unlocked
+              </>
+            ) : (
+              <>
+                <Lock className="w-3.5 h-3.5" />
+                Locked
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Message Preview */}
+        <div>
+          <p className="text-white font-medium line-clamp-3 leading-relaxed">
+            {isUnlocked ? capsule.message : '🔒 Message locked until unlock date'}
+          </p>
+        </div>
+
+        {/* Time Info */}
+        <div className="pt-3 border-t-2 border-gray-800 space-y-2">
+          {!isUnlocked && (
+            <div className="flex items-center gap-2 text-sm text-[#0052FF] font-bold">
+              <Clock className="w-4 h-4" />
+              <span>{getTimeRemaining(capsule.unlockDate)}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>
+              {isUnlocked ? 'Unlocked' : 'Unlocks'} on{' '}
+              {new Date(capsule.unlockDate).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        {isUnlocked && (
+          <a
+            href="/reveals"
+            onClick={(e) => createRipple(e)}
+            className="block w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-bold rounded-xl transition-all text-center btn-lift relative overflow-hidden"
+          >
+            View Full Message
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Image Modal Component
+function ImageModal({ image, onClose }: { image: string; onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in"
+    >
+      <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute -top-12 right-0 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+        >
+          <span className="text-white text-2xl">×</span>
+        </button>
+
+        {/* Image */}
+        <div className="relative w-full rounded-2xl overflow-hidden bg-[#1A1F2E] border-2 border-[#0052FF]/30">
+          <img
+            src={image}
+            alt="Capsule memory full view"
+            className="w-full h-auto object-contain max-h-[85vh]"
+          />
+        </div>
+      </div>
     </div>
   );
 }
