@@ -4,9 +4,10 @@ export const dynamic = 'force-static';
 
 export async function GET() {
   const manifest = {
-    version: "v1",
+    version: "1",
     name: "Base Box",
     iconUrl: "https://basebox.vercel.app/icon.png",
+    imageUrl: "https://basebox.vercel.app/og-image-FIXED.png",
     splashImageUrl: "https://basebox.vercel.app/splash-screen.png",
     splashBackgroundColor: "#000814",
     homeUrl: "https://basebox.vercel.app",
