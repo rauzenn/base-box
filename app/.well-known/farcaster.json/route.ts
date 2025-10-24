@@ -11,12 +11,12 @@ export async function GET() {
     splashBackgroundColor: "#000814",
     homeUrl: "https://base-box.vercel.app",
     capabilities: ["miniapp"],
-    
-    // Account association - TO BE FILLED after signing
+
+    // Account association – filled after signing
     accountAssociation: {
-      header: "",
-      payload: "",
-      signature: ""
+      header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDE5MTAzZEE1MkI5Q0FENDQ3MWRGOTk0ZmZCYTMwQTM2QzRjRDc2ZjUifQ",
+      payload: "eyJkb21haW4iOiJiYXNlYm94LnZlcmNlbC5hcHAifQ",
+      signature: "QWGXt6v00JXHTd2HWohiobFbJk5XGH8iShyq0dvxo1kibJFKBeD71t8nhnDRF6UZsgyk6sr9ssmYQLfh6Gv4ihs="
     }
   };
 
