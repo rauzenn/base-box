@@ -129,96 +129,10 @@ export async function GET(request: Request) {
     const unlockedSet = await kv.smembers(`user:${fid}:achievements`);
     const unlocked = Array.isArray(unlockedSet) ? unlockedSet : [];
     
-    // Get user stats
-    const capsules = await kv.smembers(`user:${fid}:capsules`);
-    const capsuleCount = Array.isArray(capsules) ? capsules.length : 0;
-
-    let revealedCount = 0;
-    let longestDuration = 0;
-
-    // Calculate stats from capsules
-    if (capsuleCount > 0) {
-      for (const capsuleId of capsules) {
-        const capsule = await kv.get<any>(`capsule:${capsuleId}`);
-        if (capsule) {
-          if (capsule.revealed || new Date(capsule.unlockDate) <= new Date()) {
-            revealedCount++;
-          }
-          
-          // Calculate duration
-          const created = new Date(capsule.createdAt);
-          const unlock = new Date(capsule.unlockDate);
-          const durationDays = Math.floor((unlock.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
-          if (durationDays > longestDuration) {
-            longestDuration = durationDays;
-          }
-        }
-      }
-    }
-
-    const stats = {
-      totalCapsules: capsuleCount,
-      revealedCapsules: revealedCount,
-      longestDuration,
-      userId: parseInt(fid),
-      joinedEarly: true // TODO: Check actual join date
-    };
-
-    // Build achievements with progress
-    const achievements = ACHIEVEMENTS.map(ach => {
-      const isUnlocked = unlocked.includes(ach.id);
-      let progress = 0;
-
-      if (!isUnlocked) {
-        // Calculate progress based on achievement type
-        if (ach.id.startsWith('capsule_')) {
-          progress = Math.min(stats.totalCapsules, ach.max);
-        } else if (ach.id.startsWith('reveal_')) {
-          progress = Math.min(stats.revealedCapsules, ach.max);
-        } else if (ach.checkCondition(stats)) {
-          progress = ach.max;
-        }
-      } else {
-        progress = ach.max;
-      }
-
-      return {
-        ...ach,
-        unlocked: isUnlocked,
-        progress
-      };
-    });
-
-    return NextResponse.json({ 
-      success: true,
-      achievements,
-      stats
-    });
-  } catch (error) {
-    console.error('❌ Achievements GET error:', error);
-    return NextResponse.json({ 
-      success: false,
-      error: 'Failed to fetch achievements' 
-    }, { status: 500 });
-  }
-}
-
-// POST - Check and unlock achievements
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { fid } = body;
-
-    if (!fid) {
-      return NextResponse.json({ error: 'FID required' }, { status: 400 });
-    }
-
-    console.log('🏆 Checking achievements for FID:', fid);
-
-    // Get current unlocked achievements
-    const unlockedSet = await kv.smembers(`user:${fid}:achievements`);
-    const unlocked = Array.isArray(unlockedSet) ? unlockedSet : [];
-
+    // Get user's claimed achievements
+    const claimedSet = await kv.smembers(`user:${fid}:achievements:claimed`);
+    const claimed = Array.isArray(claimedSet) ? claimedSet : [];
+    
     // Get user stats
     const capsules = await kv.smembers(`user:${fid}:capsules`);
     const capsuleCount = Array.isArray(capsules) ? capsules.length : 0;
@@ -253,18 +167,153 @@ export async function POST(request: Request) {
       joinedEarly: true
     };
 
-    // Check which achievements should be unlocked
+    // Build achievements with progress and claim status
+    const achievements = ACHIEVEMENTS.map(ach => {
+      const isUnlocked = unlocked.includes(ach.id);
+      const isClaimed = claimed.includes(ach.id);
+      let progress = 0;
+
+      if (!isUnlocked) {
+        if (ach.id.startsWith('capsule_')) {
+          progress = Math.min(stats.totalCapsules, ach.max);
+        } else if (ach.id.startsWith('reveal_')) {
+          progress = Math.min(stats.revealedCapsules, ach.max);
+        } else if (ach.checkCondition(stats)) {
+          progress = ach.max;
+        }
+      } else {
+        progress = ach.max;
+      }
+
+      return {
+        ...ach,
+        unlocked: isUnlocked,
+        claimed: isClaimed,
+        progress
+      };
+    });
+
+    // Count unclaimed achievements
+    const unclaimedCount = achievements.filter(a => a.unlocked && !a.claimed).length;
+
+    return NextResponse.json({ 
+      success: true,
+      achievements,
+      stats,
+      unclaimedCount
+    });
+  } catch (error) {
+    console.error('❌ Achievements GET error:', error);
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to fetch achievements' 
+    }, { status: 500 });
+  }
+}
+
+// POST - Check and unlock achievements
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { fid, action } = body;
+
+    if (!fid) {
+      return NextResponse.json({ error: 'FID required' }, { status: 400 });
+    }
+
+    // Handle claim action
+    if (action === 'claim') {
+      const { achievementId } = body;
+      
+      if (!achievementId) {
+        return NextResponse.json({ error: 'Achievement ID required' }, { status: 400 });
+      }
+
+      // Check if achievement is unlocked
+      const unlocked = await kv.smembers(`user:${fid}:achievements`);
+      if (!Array.isArray(unlocked) || !unlocked.includes(achievementId)) {
+        return NextResponse.json({ 
+          success: false,
+          error: 'Achievement not unlocked' 
+        }, { status: 400 });
+      }
+
+      // Check if already claimed
+      const claimed = await kv.smembers(`user:${fid}:achievements:claimed`);
+      if (Array.isArray(claimed) && claimed.includes(achievementId)) {
+        return NextResponse.json({ 
+          success: false,
+          error: 'Achievement already claimed' 
+        }, { status: 400 });
+      }
+
+      // Claim achievement
+      await kv.sadd(`user:${fid}:achievements:claimed`, achievementId);
+      
+      // Get achievement details
+      const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
+
+      console.log(`🎁 Achievement claimed: ${achievement?.title} by FID ${fid}`);
+
+      return NextResponse.json({ 
+        success: true,
+        claimed: true,
+        achievement: achievement ? {
+          id: achievement.id,
+          title: achievement.title,
+          icon: achievement.icon,
+          reward: achievement.reward,
+          rarity: achievement.rarity
+        } : null
+      });
+    }
+
+    // Default: Check achievements
+    console.log('🏆 Checking achievements for FID:', fid);
+
+    const unlockedSet = await kv.smembers(`user:${fid}:achievements`);
+    const unlocked = Array.isArray(unlockedSet) ? unlockedSet : [];
+
+    const capsules = await kv.smembers(`user:${fid}:capsules`);
+    const capsuleCount = Array.isArray(capsules) ? capsules.length : 0;
+
+    let revealedCount = 0;
+    let longestDuration = 0;
+
+    if (capsuleCount > 0) {
+      for (const capsuleId of capsules) {
+        const capsule = await kv.get<any>(`capsule:${capsuleId}`);
+        if (capsule) {
+          if (capsule.revealed || new Date(capsule.unlockDate) <= new Date()) {
+            revealedCount++;
+          }
+          
+          const created = new Date(capsule.createdAt);
+          const unlock = new Date(capsule.unlockDate);
+          const durationDays = Math.floor((unlock.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+          if (durationDays > longestDuration) {
+            longestDuration = durationDays;
+          }
+        }
+      }
+    }
+
+    const stats = {
+      totalCapsules: capsuleCount,
+      revealedCapsules: revealedCount,
+      longestDuration,
+      userId: parseInt(fid),
+      joinedEarly: true
+    };
+
     const newlyUnlocked = [];
 
     for (const achievement of ACHIEVEMENTS) {
-      // Skip if already unlocked
       if (unlocked.includes(achievement.id)) {
         continue;
       }
 
-      // Check if condition is met
       if (achievement.checkCondition(stats)) {
-        // Unlock achievement
         await kv.sadd(`user:${fid}:achievements`, achievement.id);
         newlyUnlocked.push({
           id: achievement.id,
@@ -283,10 +332,10 @@ export async function POST(request: Request) {
       totalUnlocked: unlocked.length + newlyUnlocked.length
     });
   } catch (error) {
-    console.error('❌ Achievement check error:', error);
+    console.error('❌ Achievement error:', error);
     return NextResponse.json({ 
       success: false,
-      error: 'Failed to check achievements' 
+      error: 'Failed to process achievements' 
     }, { status: 500 });
   }
 }

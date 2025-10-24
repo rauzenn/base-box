@@ -4,10 +4,13 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X } from 'lucide-react';
 import { useRipple, createSparkles, createConfetti } from '@/components/animations/effects';
-import { AchievementToast, useAchievements } from '/Users/han/Desktop/base-box/components/ui/achievement-toast';
+import { AchievementToast, useAchievements } from '@/components/ui/achievement-toast';
+
+// Note: Use achievement-toast-WITH-CLAIM.tsx version for claim functionality
 
 const durations = [
-  { days: 1, label: '⚡ 1 Day', emoji: '⚡', color: 'from-yellow-500 to-orange-500' },
+  { days: 1/24, label: '⚡ 1 Hour', emoji: '⚡', color: 'from-yellow-500 to-orange-500', badge: 'Quick' },
+  { days: 1, label: '📅 1 Day', emoji: '📅', color: 'from-yellow-500 to-orange-500' },
   { days: 7, label: '🌙 7 Days', emoji: '🌙', color: 'from-blue-500 to-purple-500' },
   { days: 30, label: '🎯 30 Days', emoji: '🎯', color: 'from-green-500 to-teal-500' },
   { days: 90, label: '🚀 90 Days', emoji: '🚀', color: 'from-cyan-500 to-blue-500' },
@@ -318,7 +321,7 @@ export default function CreatePage() {
               How long should this message remain locked?
             </p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {durations.map((duration, index) => (
                 <button
                   key={duration.days}
@@ -334,6 +337,12 @@ export default function CreatePage() {
                   }`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
+                  {/* Quick Badge (for 1h) */}
+                  {duration.badge && (
+                    <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500 text-black text-xs font-black rounded-full">
+                      {duration.badge}
+                    </div>
+                  )}
                   <div className="text-4xl mb-2">{duration.emoji}</div>
                   <p className="font-black text-lg">{duration.label}</p>
                 </button>

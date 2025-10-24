@@ -230,41 +230,61 @@ function CapsuleCard({
       {capsule.image && (
         <div
           onClick={() => isUnlocked && onImageClick(capsule.image!)}
-          className="relative w-full bg-[#1A1F2E] cursor-pointer group overflow-hidden"
+          className="relative w-full overflow-hidden"
           style={{ paddingBottom: '56.25%' }}
         >
-          <img
-            src={capsule.image}
-            alt="Capsule memory"
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          />
-          
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <ImageIcon className="w-6 h-6 text-white" />
+          {isUnlocked ? (
+            // UNLOCKED: Show actual image
+            <>
+              <div className="absolute inset-0 bg-[#1A1F2E] cursor-pointer group">
+                <img
+                  src={capsule.image}
+                  alt="Capsule memory"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+                
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <ImageIcon className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Locked Overlay */}
-          {!isUnlocked && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-              <div className="text-center">
-                <Lock className="w-8 h-8 text-white mx-auto mb-2" />
-                <p className="text-white text-sm font-bold">Locked</p>
+              {/* Photo Badge */}
+              <div className="absolute top-3 right-3 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg border border-cyan-500/30">
+                <div className="flex items-center gap-1.5 text-xs text-cyan-400 font-bold">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  Photo
+                </div>
+              </div>
+            </>
+          ) : (
+            // LOCKED: Show gradient background (NO IMAGE!)
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-blue-900 to-[#0A0E14] flex items-center justify-center">
+              {/* Animated background glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-blue-500/20 to-transparent animate-pulse" />
+              
+              {/* Lock icon and text */}
+              <div className="relative text-center z-10">
+                <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-white/20">
+                  <Lock className="w-10 h-10 text-white" />
+                </div>
+                <p className="text-white text-lg font-black">Locked</p>
+                <p className="text-white/60 text-sm font-medium mt-1">Image hidden until reveal</p>
+              </div>
+
+              {/* Photo Badge (locked version) */}
+              <div className="absolute top-3 right-3 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-lg border border-white/20">
+                <div className="flex items-center gap-1.5 text-xs text-white/60 font-bold">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  Photo
+                </div>
               </div>
             </div>
           )}
-
-          {/* Photo Badge */}
-          <div className="absolute top-3 right-3 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg border border-cyan-500/30">
-            <div className="flex items-center gap-1.5 text-xs text-cyan-400 font-bold">
-              <ImageIcon className="w-3.5 h-3.5" />
-              Photo
-            </div>
-          </div>
         </div>
       )}
 

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Calendar, Lock, Unlock, Trophy, TrendingUp, Sparkles, Award } from 'lucide-react';
+import { User, Calendar, Lock, Unlock, Trophy, TrendingUp, Sparkles, Award, Gift } from 'lucide-react';
 import { useRipple, createSparkles } from '@/components/animations/effects';
 import { AchievementCard } from '@/components/ui/achievement-card';
+import { BadgeShowcase } from '@/components/ui/badge-showcase';
 import BottomNav from '@/components/ui/bottom-nav';
 
 interface Stats {
@@ -20,6 +21,7 @@ interface Achievement {
   reward: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   unlocked: boolean;
+  claimed: boolean;
   progress: number;
   max: number;
 }
@@ -33,6 +35,7 @@ export default function ProfilePage() {
     longestDuration: 0,
   });
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [unclaimedCount, setUnclaimedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +44,6 @@ export default function ProfilePage() {
 
   const fetchData = async () => {
     try {
-      // Fetch achievements (includes stats)
       const achievementResponse = await fetch(`/api/achievements?fid=${fid}`);
       const achievementData = await achievementResponse.json();
 
@@ -49,6 +51,7 @@ export default function ProfilePage() {
         console.log('🏆 Achievements:', achievementData);
         setAchievements(achievementData.achievements);
         setStats(achievementData.stats);
+        setUnclaimedCount(achievementData.unclaimedCount || 0);
       }
     } catch (error) {
       console.error('Failed to fetch profile data:', error);
@@ -57,7 +60,30 @@ export default function ProfilePage() {
     }
   };
 
-  // Calculate achievement progress
+  const handleClaimAchievement = async (achievementId: string) => {
+    try {
+      const response = await fetch('/api/achievements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          fid, 
+          action: 'claim',
+          achievementId 
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('🎁 Claimed:', achievementId);
+        // Refresh achievements
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to claim achievement:', error);
+    }
+  };
+
   const getAchievementLevel = () => {
     const unlockedCount = achievements.filter(a => a.unlocked).length;
     const total = achievements.length;
@@ -193,31 +219,68 @@ export default function ProfilePage() {
           />
         </div>
 
+        {/* Unclaimed Alert */}
+        {unclaimedCount > 0 && (
+          <div className="slide-up bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-2 border-yellow-500/30 rounded-2xl p-6 mb-6 card-hover pulse" style={{ animationDelay: '0.5s' }}>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <Gift className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-black text-white mb-1">
+                  {unclaimedCount} Reward{unclaimedCount !== 1 ? 's' : ''} Available!
+                </h3>
+                <p className="text-yellow-400 font-medium">
+                  Claim your achievement rewards below
+                </p>
+              </div>
+              <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
+            </div>
+          </div>
+        )}
+
+        {/* Badge Showcase Section */}
+        <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-6 mb-6 card-hover" style={{ animationDelay: '0.6s' }}>
+          <BadgeShowcase badges={achievements} />
+        </div>
+
         {/* Achievements Section */}
-        <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-6 mb-6 card-hover" style={{ animationDelay: '0.5s' }}>
+        <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-6 mb-6 card-hover" style={{ animationDelay: '0.7s' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Award className="w-6 h-6 text-yellow-500" />
               <h3 className="text-xl font-black text-white">Achievements</h3>
             </div>
-            <div className="px-4 py-2 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-full">
-              <span className="text-sm font-bold text-[#0052FF]">
-                {achievements.filter(a => a.unlocked).length} / {achievements.length}
-              </span>
+            <div className="flex items-center gap-3">
+              {unclaimedCount > 0 && (
+                <div className="px-3 py-1 bg-yellow-500/20 border-2 border-yellow-500/30 rounded-full pulse">
+                  <span className="text-sm font-bold text-yellow-400">
+                    {unclaimedCount} to claim
+                  </span>
+                </div>
+              )}
+              <div className="px-4 py-2 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-full">
+                <span className="text-sm font-bold text-[#0052FF]">
+                  {achievements.filter(a => a.unlocked).length} / {achievements.length}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {achievements.map((achievement, index) => (
               <div key={achievement.id} className="stagger-item" style={{ animationDelay: `${0.1 * index}s` }}>
-                <AchievementCard {...achievement} />
+                <AchievementCard 
+                  {...achievement} 
+                  onClaim={handleClaimAchievement}
+                />
               </div>
             ))}
           </div>
         </div>
 
         {/* Timeline Section */}
-        <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-6 card-hover" style={{ animationDelay: '0.6s' }}>
+        <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-6 card-hover" style={{ animationDelay: '0.8s' }}>
           <div className="flex items-center gap-3 mb-6">
             <Calendar className="w-6 h-6 text-cyan-500" />
             <h3 className="text-xl font-black text-white">Recent Activity</h3>

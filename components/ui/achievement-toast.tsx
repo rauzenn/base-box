@@ -1,25 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trophy, X, Sparkles } from 'lucide-react';
+import { Trophy, X, Sparkles, Gift } from 'lucide-react';
 import { createConfetti, createSparkles } from '@/components/animations/effects';
 
 interface AchievementToastProps {
   achievement: {
+    id: string;
     title: string;
     icon: string;
     reward: string;
     rarity: 'common' | 'rare' | 'epic' | 'legendary';
   } | null;
   onClose: () => void;
+  onClaim?: (achievementId: string) => void;
 }
 
-export function AchievementToast({ achievement, onClose }: AchievementToastProps) {
+export function AchievementToast({ achievement, onClose, onClaim }: AchievementToastProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   useEffect(() => {
     if (achievement) {
-      // Show toast
       setIsVisible(true);
 
       // Trigger celebration effects
@@ -28,12 +30,7 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
         createSparkles(document.body, achievement.rarity === 'legendary' ? 30 : 20);
       }, 300);
 
-      // Auto close after 5 seconds
-      const timer = setTimeout(() => {
-        handleClose();
-      }, 5000);
-
-      return () => clearTimeout(timer);
+      // No auto-close - user must claim or close manually
     }
   }, [achievement]);
 
@@ -42,28 +39,49 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
     setTimeout(() => onClose(), 300);
   };
 
+  const handleClaim = async () => {
+    if (!achievement || !onClaim || isClaiming) return;
+    
+    setIsClaiming(true);
+    
+    // Extra celebration for claim!
+    createConfetti(80);
+    createSparkles(document.body, 30);
+    
+    await onClaim(achievement.id);
+    
+    // Close after claim
+    setTimeout(() => {
+      handleClose();
+    }, 1500);
+  };
+
   if (!achievement) return null;
 
   const rarityConfig = {
     common: {
       gradient: 'from-gray-500 to-gray-600',
       glow: 'shadow-gray-500/50',
-      border: 'border-gray-500/30'
+      border: 'border-gray-500/30',
+      buttonGradient: 'from-gray-500 to-gray-600'
     },
     rare: {
       gradient: 'from-blue-500 to-cyan-500',
       glow: 'shadow-blue-500/50',
-      border: 'border-blue-500/30'
+      border: 'border-blue-500/30',
+      buttonGradient: 'from-blue-500 to-cyan-500'
     },
     epic: {
       gradient: 'from-purple-500 to-pink-500',
       glow: 'shadow-purple-500/50',
-      border: 'border-purple-500/30'
+      border: 'border-purple-500/30',
+      buttonGradient: 'from-purple-500 to-pink-500'
     },
     legendary: {
       gradient: 'from-yellow-500 to-orange-500',
       glow: 'shadow-yellow-500/50',
-      border: 'border-yellow-500/30'
+      border: 'border-yellow-500/30',
+      buttonGradient: 'from-yellow-500 to-orange-500'
     }
   };
 
@@ -75,7 +93,7 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
         isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
       }`}
     >
-      <div className={`bg-[#0A0E14]/95 backdrop-blur-xl border-2 ${config.border} rounded-2xl p-6 shadow-2xl ${config.glow} min-w-[320px] max-w-md`}>
+      <div className={`bg-[#0A0E14]/95 backdrop-blur-xl border-2 ${config.border} rounded-2xl p-6 shadow-2xl ${config.glow} min-w-[340px] max-w-md`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -109,21 +127,32 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
           </div>
         </div>
 
-        {/* Progress indicator */}
-        <div className="w-full h-1.5 bg-[#1A1F2E] rounded-full overflow-hidden">
-          <div 
-            className={`h-full bg-gradient-to-r ${config.gradient} animate-slide-in`}
-            style={{ animation: 'slideIn 5s linear' }}
-          />
-        </div>
-      </div>
+        {/* Claim Button */}
+        {onClaim && (
+          <button
+            onClick={handleClaim}
+            disabled={isClaiming}
+            className={`w-full py-4 bg-gradient-to-r ${config.buttonGradient} rounded-xl font-black text-white shadow-lg hover:shadow-xl transition-all btn-lift relative overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+          >
+            {isClaiming ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Claiming...</span>
+              </>
+            ) : (
+              <>
+                <Gift className="w-5 h-5" />
+                <span>Claim Reward</span>
+                <Sparkles className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        )}
 
-      <style jsx>{`
-        @keyframes slideIn {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
+        <p className="text-center text-xs text-gray-500 font-medium mt-3">
+          {onClaim ? 'Click to claim your reward!' : 'Achievement automatically unlocked'}
+        </p>
+      </div>
     </div>
   );
 }
@@ -151,7 +180,7 @@ export function useAchievements(fid: number) {
           for (let i = 1; i < data.newlyUnlocked.length; i++) {
             setTimeout(() => {
               setNewAchievement(data.newlyUnlocked[i]);
-            }, i * 6000);
+            }, i * 8000); // 8s delay between multiple achievements
           }
         }
       }
@@ -162,9 +191,34 @@ export function useAchievements(fid: number) {
     }
   };
 
+  const claimAchievement = async (achievementId: string) => {
+    try {
+      const response = await fetch('/api/achievements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          fid, 
+          action: 'claim',
+          achievementId 
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('🎁 Achievement claimed:', achievementId);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Failed to claim achievement:', error);
+    }
+  };
+
   return {
     newAchievement,
     checkAchievements,
+    claimAchievement,
     clearAchievement: () => setNewAchievement(null)
   };
 }
