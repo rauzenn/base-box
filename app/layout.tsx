@@ -1,66 +1,77 @@
-// app/layout.tsx
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { MiniAppProvider } from "@/components/miniapp-provider";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-
-const SITE = "https://basebox.vercel.app";
-const OG   = `${SITE}/og-image-FIXED.png`;
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE),
-  title: "Base Box — Lock your memories onchain",
-  description:
-    "Create and preserve your onchain moments with Base Box. Built for the Based community.",
+  title: 'Base Box - Time Capsules on Base',
+  description: 'Lock messages for your future self on Base blockchain',
+  metadataBase: new URL('https://basebox.vercel.app'),
   openGraph: {
-    type: "website",
-    url: `${SITE}/`,
-    title: "Base Box — Lock your memories onchain",
-    description:
-      "Create and preserve your onchain moments with Base Box. Built for the Based community.",
-    images: [{ url: OG, width: 1200, height: 630, alt: "Base Box" }],
+    title: 'Base Box - Time Capsules on Base',
+    description: 'Lock messages for your future self on Base blockchain',
+    url: 'https://basebox.vercel.app',
+    siteName: 'Base Box',
+    images: [
+      {
+        url: '/og-image-FIXED.png',
+        width: 1200,
+        height: 630,
+        alt: 'Base Box',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Base Box — Lock your memories onchain",
-    description:
-      "Create and preserve your onchain moments with Base Box. Built for the Based community.",
-    images: [OG],
+    card: 'summary_large_image',
+    title: 'Base Box - Time Capsules on Base',
+    description: 'Lock messages for your future self on Base blockchain',
+    images: ['/og-image-FIXED.png'],
   },
-  robots: { index: true, follow: true },
+  other: {
+    // Single JSON meta tag for Farcaster Mini App
+    'fc:miniapp': JSON.stringify({
+      name: 'Base Box',
+      description: 'Lock messages for your future self on Base blockchain',
+      icon: 'https://basebox.vercel.app/icon.png',
+      homeUrl: 'https://basebox.vercel.app',
+      imageUrl: 'https://basebox.vercel.app/og-image-FIXED.png',
+      splashImageUrl: 'https://basebox.vercel.app/splash-screen.png',
+      splashBackgroundColor: '#000000',
+    }),
+    // Alternative: fc:frame format (some clients prefer this)
+    'fc:frame': JSON.stringify({
+      version: '1',
+      name: 'Base Box',
+      homeUrl: 'https://basebox.vercel.app',
+      iconUrl: 'https://basebox.vercel.app/icon.png',
+      splashImageUrl: 'https://basebox.vercel.app/splash-screen.png',
+      splashBackgroundColor: '#000000',
+      imageUrl: 'https://basebox.vercel.app/og-image-FIXED.png',
+    }),
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        {/* --- Explicit OG/Twitter (Embed botları kesin görsün) --- */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${SITE}/`} />
-        <meta property="og:title" content="Base Box — Lock your memories onchain" />
-        <meta property="og:description" content="Create and preserve your onchain moments with Base Box. Built for the Based community." />
-        <meta property="og:image" content={OG} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Base Box" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Base Box — Lock your memories onchain" />
-        <meta name="twitter:description" content="Create and preserve your onchain moments with Base Box. Built for the Based community." />
-        <meta name="twitter:image" content={OG} />
-
-        {/* --- Mini App embed sinyali --- */}
-        <meta property="fc:miniapp" content={SITE} />
-        <meta property="fc:miniapp:name" content="Base Box" />
-        <meta property="fc:miniapp:image" content={OG} />
-        <meta property="fc:miniapp:button:1" content="Open Base Box" />
-        {/* önce launch_frame ile Present ✓ görmüştün; onu koruyorum */}
-        <meta property="fc:miniapp:button:1:action" content="launch_frame" />
-        <meta property="fc:miniapp:button:1:target" content={SITE} />
+        {/* Additional frame-specific meta tags for maximum compatibility */}
+        <meta property="fc:frame" content="vNext" />
+        <meta property="fc:frame:image" content="https://basebox.vercel.app/og-image-FIXED.png" />
+        <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
       </head>
       <body className={inter.className}>
-        <MiniAppProvider>{children}</MiniAppProvider>
+        {children}
       </body>
     </html>
   );
