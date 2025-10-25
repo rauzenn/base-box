@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock, Unlock, Clock, Sparkles } from 'lucide-react';
+import { Lock, Unlock, Clock, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { useRipple } from '@/components/animations/effects';
 import sdk from '@farcaster/frame-sdk';
 
@@ -18,17 +18,17 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // IMMEDIATE SDK READY CALL
+    // Initialize SDK
     const initSDK = async () => {
       try {
         await sdk.context;
         sdk.actions.ready();
-        console.log('✅ Home: SDK ready called');
+        console.log('✅ Home page - SDK ready!');
       } catch (error) {
-        console.error('❌ SDK error:', error);
+        console.error('SDK init error:', error);
       }
     };
-
+    
     initSDK();
     fetchStats();
   }, []);
@@ -168,6 +168,24 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="mt-8 stagger-item" style={{ animationDelay: '0.4s' }}>
+          <h2 className="text-xl font-black text-white mb-4">Recent Activity</h2>
+          <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-8 text-center">
+            <TrendingUp className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-400 font-medium mb-2">No recent activity</p>
+            <p className="text-gray-500 text-sm mb-6">Create your first capsule to get started!</p>
+            <a
+              href="/create"
+              onClick={(e) => createRipple(e as any)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all btn-lift relative overflow-hidden"
+            >
+              <Lock className="w-5 h-5" />
+              Create First Capsule
+            </a>
           </div>
         </div>
       </div>

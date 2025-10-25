@@ -10,10 +10,10 @@ export function MiniAppProvider({ children }: { children: React.ReactNode }) {
         // Wait for SDK to be ready
         await sdk.context;
         
-        // Call ready IMMEDIATELY
+        // Call ready immediately
         sdk.actions.ready();
         
-        console.log('✅ SDK ready called!');
+        console.log('✅ SDK ready() called successfully!');
       } catch (error) {
         console.error('❌ SDK error:', error);
       }
