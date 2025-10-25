@@ -17,7 +17,8 @@ export async function GET() {
       imageUrl: "https://basebox.vercel.app/og-image.png",
       splashImageUrl: "https://basebox.vercel.app/splash.png",
       splashBackgroundColor: "#000814",
-      webhookUrl: "https://basebox.vercel.app/api/webhook",
+      primaryCategory: "social",
+      tags: ["time-capsule", "blockchain", "base", "memories"],
       button: {
         title: "Launch Base Box",
         action: {
@@ -28,10 +29,6 @@ export async function GET() {
           splashBackgroundColor: "#000814"
         }
       }
-    },
-    metadata: {
-      primaryCategory: "social",
-      tags: ["time-capsule", "blockchain", "base", "memories", "nft"]
     }
   };
 
