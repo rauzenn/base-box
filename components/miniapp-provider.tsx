@@ -5,17 +5,21 @@ import sdk from '@farcaster/frame-sdk';
 
 export function MiniAppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const init = async () => {
-      // Wait for SDK context
-      const context = await sdk.context;
-      console.log('✅ Farcaster SDK context:', context);
-      
-      // Signal ready
-      sdk.actions.ready();
-      console.log('✅ sdk.actions.ready() called!');
+    const load = async () => {
+      try {
+        // Wait for SDK to be ready
+        await sdk.context;
+        
+        // Call ready IMMEDIATELY
+        sdk.actions.ready();
+        
+        console.log('✅ SDK ready called!');
+      } catch (error) {
+        console.error('❌ SDK error:', error);
+      }
     };
 
-    init();
+    load();
   }, []);
 
   return <>{children}</>;
