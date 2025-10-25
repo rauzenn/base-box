@@ -1,42 +1,93 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 
-export async function GET(request: NextRequest) {
+export const runtime = 'nodejs';
+
+interface Capsule {
+  id: string;
+  fid: number;
+  message: string;
+  createdAt: string;
+  unlockDate: string;
+  revealed: boolean;
+}
+
+interface AdminStats {
+  totalCapsules: number;
+  lockedCapsules: number;
+  revealedCapsules: number;
+  totalUsers: number;
+}
+
+export async function GET(request: Request) {
   try {
-    console.log('📦 Admin: Fetching all capsules');
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
-    // Get all capsule keys
-    const keys = await kv.keys('capsule:*');
-    console.log(`Found ${keys.length} capsule keys`);
+    console.log('🔍 Admin: Fetching capsules...');
 
-    // Fetch all capsules
-    const capsules = [];
-    for (const key of keys) {
-      const capsule = await kv.get(key);
+    const capsuleKeys = await kv.keys('capsule:*');
+    
+    console.log(`📦 Found ${capsuleKeys?.length || 0} keys`);
+
+    if (!capsuleKeys || capsuleKeys.length === 0) {
+      return NextResponse.json({
+        success: true,
+        capsules: [],
+        stats: {
+          totalCapsules: 0,
+          lockedCapsules: 0,
+          revealedCapsules: 0,
+          totalUsers: 0
+        }
+      });
+    }
+
+    const capsules: Capsule[] = [];
+    const uniqueFids = new Set<number>();
+    
+    for (const key of capsuleKeys) {
+      const capsule = await kv.get<Capsule>(key);
       if (capsule) {
         capsules.push(capsule);
+        uniqueFids.add(capsule.fid);
       }
     }
 
-    // Sort by creation date (newest first)
-    capsules.sort((a: any, b: any) => 
+    const lockedCapsules = capsules.filter(c => !c.revealed).length;
+    const revealedCapsules = capsules.filter(c => c.revealed).length;
+
+    const stats: AdminStats = {
+      totalCapsules: capsules.length,
+      lockedCapsules,
+      revealedCapsules,
+      totalUsers: uniqueFids.size
+    };
+
+    capsules.sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    console.log(`✅ Returning ${capsules.length} capsules`);
+    console.log('✅ Loaded:', stats);
 
     return NextResponse.json({
       success: true,
       capsules,
-      count: capsules.length
+      stats
     });
 
   } catch (error) {
-    console.error('❌ Admin capsules error:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to fetch capsules',
-      capsules: []
-    }, { status: 500 });
+    console.error('❌ Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to fetch capsules' },
+      { status: 500 }
+    );
   }
 }
