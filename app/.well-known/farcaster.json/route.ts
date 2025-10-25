@@ -11,7 +11,12 @@ export async function GET() {
     },
     frame: {
       version: "next",
+      name: "Base Box",
+      iconUrl: "https://basebox.vercel.app/icon.png",
+      homeUrl: "https://basebox.vercel.app",
       imageUrl: "https://basebox.vercel.app/og-image.png",
+      splashImageUrl: "https://basebox.vercel.app/splash.png",
+      splashBackgroundColor: "#000814",
       button: {
         title: "Launch Base Box",
         action: {
