@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock, Unlock, Clock, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { Lock, Unlock, Clock, Sparkles, TrendingUp } from 'lucide-react';
 import { useRipple } from '@/components/animations/effects';
 import sdk from '@farcaster/frame-sdk';
 
@@ -11,27 +11,46 @@ interface Stats {
 }
 
 export default function HomePage() {
-  const fid = 3;
+  const [fid, setFid] = useState(3); // Default FID
   const createRipple = useRipple();
   
   const [stats, setStats] = useState<Stats>({ locked: 0, revealed: 0 });
   const [loading, setLoading] = useState(true);
+  const [sdkReady, setSdkReady] = useState(false);
 
+  // Initialize SDK
   useEffect(() => {
-    // Initialize SDK
     const initSDK = async () => {
       try {
-        await sdk.context;
+        const context = await sdk.context;
+        console.log('✅ SDK Context:', context);
+        
+        // Get user FID from context
+        if (context.user?.fid) {
+          setFid(context.user.fid);
+          console.log('✅ User FID:', context.user.fid);
+        }
+        
+        // Signal ready
         sdk.actions.ready();
-        console.log('✅ Home page - SDK ready!');
+        setSdkReady(true);
+        console.log('✅ sdk.actions.ready() called!');
       } catch (error) {
-        console.error('SDK init error:', error);
+        console.error('❌ SDK init error:', error);
+        // Fallback: still mark as ready and use default FID
+        setSdkReady(true);
       }
     };
-    
+
     initSDK();
-    fetchStats();
   }, []);
+
+  // Fetch stats after SDK is ready
+  useEffect(() => {
+    if (sdkReady) {
+      fetchStats();
+    }
+  }, [sdkReady, fid]);
 
   const fetchStats = async () => {
     try {
@@ -49,6 +68,18 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  // Show loading while SDK initializes
+  if (!sdkReady) {
+    return (
+      <div className="min-h-screen bg-[#000814] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400 font-bold">Loading Base Box...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#000814] pb-20">
