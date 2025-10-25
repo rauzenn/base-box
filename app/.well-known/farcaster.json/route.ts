@@ -10,13 +10,14 @@ export async function GET() {
       signature: "QWGXt6v00JXHTd2HWohiobFbJk5XGH8iShyq0dvxo1kibJFKBeD71t8nhnDRF6UZsgyk6sr9ssmYQLfh6Gv4ihs="
     },
     frame: {
-      version: "next",
+      version: "1",
       name: "Base Box",
       iconUrl: "https://basebox.vercel.app/icon.png",
       homeUrl: "https://basebox.vercel.app",
       imageUrl: "https://basebox.vercel.app/og-image.png",
       splashImageUrl: "https://basebox.vercel.app/splash.png",
       splashBackgroundColor: "#000814",
+      webhookUrl: "https://basebox.vercel.app/api/webhook",
       button: {
         title: "Launch Base Box",
         action: {
@@ -27,6 +28,10 @@ export async function GET() {
           splashBackgroundColor: "#000814"
         }
       }
+    },
+    metadata: {
+      primaryCategory: "social",
+      tags: ["time-capsule", "blockchain", "base", "memories", "nft"]
     }
   };
 
