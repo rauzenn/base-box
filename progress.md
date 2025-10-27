@@ -4,7 +4,7 @@
 **Base Box** - Blockchain-based time capsule application built on Base chain.
 Users can lock messages/memories onchain, set unlock dates, and collect achievement NFTs.
 
----
+---🧠 Updated for new feature testing.
 
 ## ✅ COMPLETED FEATURES (Latest Session)
 
