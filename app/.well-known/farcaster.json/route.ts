@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-static';
 
 export async function GET() {
+  const APP_URL = 'https://basebox.vercel.app';
+  
   const manifest = {
     accountAssociation: {
       header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDE5MTAzZEE1MkI5Q0FENDQ3MWRGOTk0ZmZCYTMwQTM2QzRjRDc2ZjUifQ",
@@ -11,27 +13,17 @@ export async function GET() {
     },
     frame: {
       version: "1",
-      name: "Base Box",
-      iconUrl: "https://basebox.vercel.app/icon.png",
-      homeUrl: "https://basebox.vercel.app",
-      imageUrl: "https://basebox.vercel.app/og-image.png",
-      splashImageUrl: "https://basebox.vercel.app/splash.png",
-      splashBackgroundColor: "#000814",
-      webhookUrl: "https://basebox.vercel.app/api/webhook",
+      imageUrl: `${APP_URL}/og-image.png`,
       button: {
         title: "Launch Base Box",
         action: {
           type: "launch_frame",
           name: "Base Box",
-          url: "https://basebox.vercel.app",
-          splashImageUrl: "https://basebox.vercel.app/splash.png",
+          url: APP_URL,
+          splashImageUrl: `${APP_URL}/splash.png`,
           splashBackgroundColor: "#000814"
         }
       }
-    },
-    metadata: {
-      primaryCategory: "social",
-      tags: ["time-capsule", "blockchain", "base", "memories", "nft"]
     }
   };
 
