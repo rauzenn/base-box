@@ -16,7 +16,7 @@ export async function GET() {
       iconUrl: `${APP_URL}/icon.png`,
       homeUrl: APP_URL,
       primaryCategory: "social",
-      tags: ["blockchain", "time-capsule", "nft", "base", "memories"]
+      tags: ["time-capsule", "blockchain", "base", "memories", "nft"]
     },
     embed: {
       imageUrl: `${APP_URL}/og-image.png`,
