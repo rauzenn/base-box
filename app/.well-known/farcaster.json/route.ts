@@ -13,7 +13,12 @@ export async function GET() {
     },
     frame: {
       version: "1",
+      name: "Base Box",
+      iconUrl: `${APP_URL}/icon.png`,
+      homeUrl: APP_URL,
       imageUrl: `${APP_URL}/og-image.png`,
+      splashImageUrl: `${APP_URL}/splash.png`,
+      splashBackgroundColor: "#000814",
       button: {
         title: "Launch Base Box",
         action: {
