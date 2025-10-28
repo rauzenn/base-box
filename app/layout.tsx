@@ -16,38 +16,26 @@ export const metadata: Metadata = {
   
   metadataBase: new URL(APP_URL),
   
-  // Open Graph
   openGraph: {
     title: 'Base Box',
     description: 'Lock messages & memories onchain',
     url: APP_URL,
     siteName: 'Base Box',
     images: [{
-      url: '/og-image.png',
+      url: `${APP_URL}/og-image.png`,
       width: 1200,
       height: 630,
-      alt: 'Base Box - Time Capsules on Base'
+      alt: 'Base Box'
     }],
     type: 'website',
   },
   
-  // Twitter
   twitter: {
     card: 'summary_large_image',
     title: 'Base Box',
     description: 'Lock messages & memories onchain',
-    images: ['/og-image.png'],
+    images: [`${APP_URL}/og-image.png`],
   },
-  
-  // Farcaster Frame metadata
-  other: {
-    'fc:frame': 'vNext',
-    'fc:frame:image': `${APP_URL}/og-image.png`,
-    'fc:frame:image:aspect_ratio': '1.91:1',
-    'fc:frame:button:1': 'Launch Base Box',
-    'fc:frame:button:1:action': 'link',
-    'fc:frame:button:1:target': APP_URL,
-  }
 };
 
 export default function RootLayout({
@@ -57,6 +45,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        {/* Farcaster Frame Meta Tags - MUST use property attribute! */}
+        <meta property="fc:frame" content="vNext" />
+        <meta property="fc:frame:image" content={`${APP_URL}/og-image.png`} />
+        <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+        <meta property="fc:frame:button:1" content="Launch Base Box" />
+        <meta property="fc:frame:button:1:action" content="link" />
+        <meta property="fc:frame:button:1:target" content={APP_URL} />
+      </head>
       <body className={inter.className}>
         <MiniAppProvider>
           {children}
