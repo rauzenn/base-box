@@ -1,28 +1,36 @@
-// next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Farcaster embed için gerekli header'lar
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [
           {
-            key: 'Content-Security-Policy',
-            value:
-              "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; connect-src 'self' https:; frame-ancestors 'self' https://*.warpcast.com https://*.farcaster.xyz https://*.onbasebuild.com;",
-          },
-          // Explicitly remove X-Frame-Options to avoid conflicts with CSP frame-ancestors
-          {
             key: 'X-Frame-Options',
-            value: '', // Empty value removes the header
+            value: 'ALLOW-FROM https://*.warpcast.com',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' https://*.warpcast.com https://*.farcaster.xyz;",
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate, max-age=0',
           },
         ],
       },
     ];
   },
-  // Optimize image handling
+  // Görsel dosyaları için domain izinleri
   images: {
     domains: ['basebox.vercel.app'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.vercel.app',
+      },
+    ],
   },
 };
 

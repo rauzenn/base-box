@@ -711,3 +711,17 @@ open http://localhost:3000
 ```
 
 **Recommended:** Start with Farcaster SDK for real user authentication! 🎭
+
+
+
+## 📚 REFERENCES
+
+### Documentation:
+- https://docs.base.org/mini-apps/
+- https://docs.base.org/mini-apps/core-concepts/manifest
+- https://docs.base.org/mini-apps/core-concepts/embeds-and-previews
+
+### Tools:
+- Base Build Preview: https://www.base.dev/preview
+- Embed Tool: https://warpcast.com/~/developers/embeds
+- Repository: https://github.com/rauzenn/base-box

@@ -1,62 +1,77 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import { MiniAppProvider } from '@/components/miniapp-provider';
-import './globals.css';
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
 
-const inter = Inter({ 
-  subsets: ['latin'],
-  variable: '--font-inter',
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
 });
 
-const APP_URL = 'https://basebox.vercel.app';
+// Farcaster Mini App manifest - TEK BİR JSON OBJESI OLARAK
+const farcasterManifest = {
+  version: "1",
+  name: "Base Box",
+  icon: "lock",
+  splashImageUrl: "https://basebox.vercel.app/og-image.png",
+  splashBackgroundColor: "#0052FF",
+  homeUrl: "https://basebox.vercel.app",
+};
 
 export const metadata: Metadata = {
-  title: 'Base Box - Time Capsules on Base',
-  description: 'Lock messages & memories onchain. Time capsules on Base blockchain.',
-  
-  metadataBase: new URL(APP_URL),
-  
+  title: "Base Box - Time Capsules on Base",
+  description: "Lock your messages onchain. Reveal them in the future. Built on Base blockchain.",
   openGraph: {
-    title: 'Base Box',
-    description: 'Lock messages & memories onchain',
-    url: APP_URL,
-    siteName: 'Base Box',
-    images: [{
-      url: `${APP_URL}/og-image.png`,
-      width: 1200,
-      height: 630,
-      alt: 'Base Box'
-    }],
-    type: 'website',
+    title: "Base Box - Time Capsules on Base",
+    description: "Lock your messages onchain. Reveal them in the future. Built on Base blockchain.",
+    url: "https://basebox.vercel.app",
+    siteName: "Base Box",
+    images: [
+      {
+        url: "https://basebox.vercel.app/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Base Box - Time Capsules on Base",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
   },
-  
   twitter: {
-    card: 'summary_large_image',
-    title: 'Base Box',
-    description: 'Lock messages & memories onchain',
-    images: [`${APP_URL}/og-image.png`],
+    card: "summary_large_image",
+    title: "Base Box - Time Capsules on Base",
+    description: "Lock your messages onchain. Reveal them in the future.",
+    images: ["https://basebox.vercel.app/og-image.png"],
+  },
+  // Farcaster manifest - ÖNEMLİ: "other" property'sine JSON string olarak ekliyoruz
+  other: {
+    "fc:miniapp": JSON.stringify(farcasterManifest),
   },
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en">
       <head>
-        {/* Farcaster Frame Meta Tags */}
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content={`${APP_URL}/og-image.png`} />
-        <meta property="fc:frame:button:1" content="Launch Base Box" />
-        <meta property="fc:frame:button:1:action" content="launch_frame" />
-        <meta property="fc:frame:button:1:target" content={APP_URL} />
+        {/* Farcaster manifest'i manuel olarak da ekleyelim - name attribute ile */}
+        <meta 
+          name="fc:miniapp" 
+          content={JSON.stringify(farcasterManifest)} 
+        />
       </head>
-      <body className={inter.className}>
-        <MiniAppProvider>
-          {children}
-        </MiniAppProvider>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
       </body>
     </html>
   );
