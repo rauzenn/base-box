@@ -11,14 +11,15 @@ export async function GET() {
       payload: "eyJkb21haW4iOiJiYXNlYm94LnZlcmNlbC5hcHAifQ",
       signature: "QWGXt6v00JXHTd2HWohiobFbJk5XGH8iShyq0dvxo1kibJFKBeD71t8nhnDRF6UZsgyk6sr9ssmYQLfh6Gv4ihs="
     },
-    frame: {
-      version: "1",
+    miniapp: {
       name: "Base Box",
       iconUrl: `${APP_URL}/icon.png`,
       homeUrl: APP_URL,
+      primaryCategory: "social",
+      tags: ["blockchain", "time-capsule", "nft", "base", "memories"]
+    },
+    embed: {
       imageUrl: `${APP_URL}/og-image.png`,
-      splashImageUrl: `${APP_URL}/splash.png`,
-      splashBackgroundColor: "#000814",
       button: {
         title: "Launch Base Box",
         action: {

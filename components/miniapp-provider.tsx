@@ -1,25 +1,29 @@
 'use client';
 
 import { useEffect } from 'react';
-import sdk from '@farcaster/frame-sdk';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 export function MiniAppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        // Wait for SDK context
-        const context = await sdk.context;
-        console.log('✅ Farcaster SDK context loaded:', context);
+        // Check if in miniapp
+        const isInMiniApp = await sdk.isInMiniApp();
+        console.log('✅ Is in Mini App:', isInMiniApp);
         
-        // Signal ready to parent
-        sdk.actions.ready();
-        console.log('✅ sdk.actions.ready() called!');
+        if (isInMiniApp) {
+          // Get context
+          const context = await sdk.context;
+          console.log('✅ SDK Context loaded:', context);
+          
+          // Signal ready
+          sdk.actions.ready();
+          console.log('✅ sdk.actions.ready() called!');
+        } else {
+          console.log('ℹ️ Not in Mini App - running in web browser');
+        }
       } catch (error) {
         console.error('❌ SDK initialization error:', error);
-        // Still signal ready even on error for web preview
-        try {
-          sdk.actions.ready();
-        } catch {}
       }
     };
 
