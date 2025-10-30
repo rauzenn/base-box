@@ -1,19 +1,7 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "./globals.css";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
-
-// Farcaster Mini App manifest - TEK BİR JSON OBJESI OLARAK
+// Farcaster Mini App manifest - TEK BİR JSON OBJESI
 const farcasterManifest = {
   version: "1",
   name: "Base Box",
@@ -68,9 +56,7 @@ export default function RootLayout({
           content={JSON.stringify(farcasterManifest)} 
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         {children}
       </body>
     </html>
