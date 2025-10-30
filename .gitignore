@@ -7,3 +7,10 @@ node_modules
 .env
 .env.local
 .env.*.local
+# macOS
+.DS_Store
+# Next.js auto-generated
+next-env.d.ts
+
+# Test outputs
+test-output.*
