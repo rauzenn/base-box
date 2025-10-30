@@ -4,30 +4,48 @@ export const dynamic = 'force-static';
 
 export async function GET() {
   const manifest = {
-    // Account association - mevcut
     accountAssociation: {
       header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDE5MTAzZEE1MkI5Q0FENDQ3MWRGOTk0ZmZCYTMwQTM2QzRjRDc2ZjUifQ",
       payload: "eyJkb21haW4iOiJiYXNlYm94LnZlcmNlbC5hcHAifQ",
       signature: "QWGXt6v00JXHTd2HWohiobFbJk5XGH8iShyq0dvxo1kibJFKBeD71t8nhnDRF6UZsgyk6sr9ssmYQLfh6Gv4ihs="
     },
-    // ✅ "miniapp" olmalı - "frame" değil!
-    miniapp: {
-      version: "1", // ✅ STRING!
+    frame: {
+      // Required fields
+      version: "1",
       name: "Base Box",
-      icon: "lock",
+      iconUrl: "https://basebox.vercel.app/icon.png",
       homeUrl: "https://basebox.vercel.app",
-      imageUrl: "https://basebox.vercel.app/icon.png", // Manifest icon (512x512)
-      buttonTitle: "Open Base Box",
-      splashImageUrl: "https://basebox.vercel.app/splash.png", // 512x512
+      
+      // Embed fields  
+      imageUrl: "https://basebox.vercel.app/embed-image.png",
+      buttonTitle: "🔒 Launch Base Box",
+      
+      // Splash screen
+      splashImageUrl: "https://basebox.vercel.app/splash.png",
       splashBackgroundColor: "#000814",
-      webhookUrl: ""
+      
+      // Optional metadata (Farcaster spec compliant)
+      subtitle: "Lock memories onchain, unlock future",
+      description: "Base Box is a blockchain time capsule app on Base. Create time-locked messages, set unlock dates, and collect achievement NFTs. Perfect for predictions, goals, and preserving memories.",
+      screenshotUrls: [
+        "https://basebox.vercel.app/screenshots/create.png",
+        "https://basebox.vercel.app/screenshots/capsules.png",
+        "https://basebox.vercel.app/screenshots/reveal.png"
+      ],
+      primaryCategory: "social",
+      tags: ["time-capsule", "blockchain", "base", "memories", "nft"],
+      heroImageUrl: "https://basebox.vercel.app/hero-image.png",
+      tagline: "Time remembers. Base preserves.",
+      ogTitle: "Base Box - Onchain Time Capsules",
+      ogDescription: "Lock your memories onchain. Set unlock dates in the future. Built on Base blockchain.",
+      ogImageUrl: "https://basebox.vercel.app/og-image.png"
     }
   };
 
   return NextResponse.json(manifest, {
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=300, must-revalidate' // 5 dakika cache
+      'Cache-Control': 'public, max-age=0, must-revalidate'
     }
   });
 }
