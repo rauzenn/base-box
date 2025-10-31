@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X } from 'lucide-react';
 import { useRipple, createSparkles, createConfetti } from '@/components/animations/effects';
 import { AchievementToast, useAchievements } from '@/components/ui/achievement-toast';
+import { useFarcaster } from '../hooks/use-farcaster';
+import BottomNav from '@/components/ui/bottom-nav';
 
 // Note: Use achievement-toast-WITH-CLAIM.tsx version for claim functionality
 
@@ -20,7 +22,7 @@ const durations = [
 
 export default function CreatePage() {
   const router = useRouter();
-  const fid = 3;
+  const { fid, isLoading } = useFarcaster();
   const createRipple = useRipple();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { newAchievement, checkAchievements, clearAchievement } = useAchievements(fid);
@@ -167,6 +169,44 @@ export default function CreatePage() {
       year: 'numeric'
     });
   };
+
+// Loading state
+if (isLoading) {
+  return (
+    <div className="min-h-screen bg-[#000814] pb-24">
+      <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
+      <div className="fixed inset-0 opacity-20" style={{
+        backgroundImage: `linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)`,
+        backgroundSize: '50px 50px'
+      }} />
+      
+      <div className="relative z-10 flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
+          <p className="text-gray-400 font-bold">Loading...</p>
+        </div>
+      </div>
+      <BottomNav />
+    </div>
+  );
+}
+
+// No FID error state
+if (!fid) {
+  return (
+    <div className="min-h-screen bg-[#000814] pb-24">
+      <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
+      
+      <div className="relative z-10 flex items-center justify-center h-screen text-white">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Farcaster Required</h2>
+          <p className="text-gray-400">Please open this app in Farcaster</p>
+        </div>
+      </div>
+      <BottomNav />
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-[#000814] pb-20">

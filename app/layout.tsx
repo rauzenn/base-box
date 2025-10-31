@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { FarcasterProvider } from './providers/farcaster-provider'; // ⭐ EKLE
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -45,20 +46,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <head>
-        {/* ✅ Farcaster Mini App Embed - KRITIK! */}
-        <meta 
-          name="fc:miniapp" 
-          content={JSON.stringify(farcasterEmbed)} 
-        />
-        {/* ✅ Backward compatibility */}
-        <meta 
-          name="fc:frame" 
-          content={JSON.stringify(farcasterEmbed)} 
-        />
-      </head>
       <body className={inter.className}>
-        {children}
+        <FarcasterProvider>
+          {children}
+        </FarcasterProvider>
       </body>
     </html>
   );
