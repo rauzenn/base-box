@@ -656,3 +656,248 @@ base-box/
 **Last Updated:** October 31, 2025, 02:40 UTC  
 **Next Milestone:** Real Farcaster Auth + NFT Minting  
 **Status:** 🟢 Production (MVP)
+
+
+cat >> /mnt/user-data/outputs/progress.md << 'ENDOFFILE'
+
+---
+
+## 🔧 Phase 3: Farcaster SDK Integration & Fixes (November 1, 2025)
+
+### 11. **Farcaster SDK Integration** ✅
+**Status:** Complete with multiple bug fixes
+
+**Implementation:**
+- SDK Package: `@farcaster/frame-sdk`
+- Provider Component: `app/providers/farcaster-provider.tsx`
+- Custom Hook: `app/hooks/use-farcaster.tsx`
+
+**Challenges & Solutions:**
+
+#### Issue 1: Module Not Found ❌
+```bash
+npm error code ENOTEMPTY
+```
+**Solution:**
+```bash
+rm -rf node_modules
+npm cache clean --force
+npm install @farcaster/frame-sdk
+```
+
+#### Issue 2: TypeScript Type Errors ❌
+```
+Type error: Module '@farcaster/frame-sdk' has no exported member 'FrameContext'
+```
+**Solution:**
+```tsx
+// Before (Error)
+import sdk, { type FrameContext } from '@farcaster/frame-sdk';
+const [context, setContext] = useState<FrameContext | null>(null);
+
+// After (Fixed)
+import sdk from '@farcaster/frame-sdk';
+const [context, setContext] = useState<any>(null);
+```
+
+#### Issue 3: setTheme Method Not Found ❌
+```
+Property 'setTheme' does not exist on type '{ ready: ... }'
+```
+**Solution:**
+```tsx
+// Removed unsupported method
+sdk.actions.setTheme('dark'); // ❌ Removed
+sdk.actions.ready(); // ✅ Only this needed
+```
+
+#### Issue 4: Tailwind CSS Build Errors ❌
+```
+Syntax Error in className="..."
+```
+**Solution:**
+```tsx
+// Replaced Tailwind with inline styles in Provider
+<div className="min-h-screen..." /> // ❌ Caused build error
+<div style={{ minHeight: '100vh', ... }} /> // ✅ Works everywhere
+```
+
+#### Issue 5: Metadata Export in Client Component ❌
+```
+You are attempting to export "metadata" from a component marked with "use client"
+```
+**Solution:**
+```tsx
+// Removed metadata from app/page.tsx (client component)
+// Kept only in app/layout.tsx (server component)
+```
+
+#### Issue 6: Embed Validation Failed ❌
+```
+Embed Present: ✅
+Embed Valid: ❌
+```
+**Root Cause:** Wrong image dimensions
+- og-image.png: 1024x1024 ❌ (should be 1200x630)
+- embed-image.png: unknown ❌ (should be 945x630)
+- hero-image.png: 1672x1204 ❌ (should be 1200x630)
+
+**Solution:**
+All images resized to correct Farcaster specifications:
+- ✅ og-image.png: 1200x630 (1.91:1 aspect ratio)
+- ✅ embed-image.png: 945x630 (1.91:1 aspect ratio)
+- ✅ hero-image.png: 1200x630 (1.91:1 aspect ratio)
+- ✅ icon.png: 512x512 (already correct)
+- ✅ splash.png: 512x512 (already correct)
+
+**Final Layout.tsx Configuration:**
+```tsx
+export const metadata: Metadata = {
+  title: 'Base Box - Onchain Time Capsules',
+  description: 'Lock your memories onchain. Unlock them in the future.',
+  metadataBase: new URL('https://basebox.vercel.app'),
+  openGraph: {
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
+  icons: { icon: '/icon.png' },
+};
+
+// Explicit meta tags in <head>
+<meta property="fc:frame" content="vNext" />
+<meta property="fc:frame:image" content="https://basebox.vercel.app/embed-image.png" />
+<meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+<meta property="fc:frame:button:1" content="Launch Base Box" />
+<meta property="fc:frame:button:1:action" content="link" />
+<meta property="fc:frame:button:1:target" content="https://basebox.vercel.app" />
+```
+
+**Real FID Implementation:**
+```tsx
+// All pages updated (create, capsules, reveals, profile)
+
+// Before
+const fid = 3; // ❌ Mock FID
+
+// After
+import { useFarcaster } from '../hooks/use-farcaster';
+const { fid, isLoading } = useFarcaster(); // ✅ Real FID from user
+
+// Loading state
+if (isLoading) return <LoadingScreen />;
+
+// Error state (not in Farcaster)
+if (!fid) return <ErrorScreen />;
+```
+
+**Files Modified:**
+1. ✅ `app/providers/farcaster-provider.tsx` - SDK initialization
+2. ✅ `app/hooks/use-farcaster.tsx` - Real FID hook
+3. ✅ `app/layout.tsx` - FarcasterProvider wrapper + metadata
+4. ✅ `app/create/page.tsx` - Real FID + loading/error states
+5. ✅ `app/capsules/page.tsx` - Real FID + loading/error states
+6. ✅ `app/reveals/page.tsx` - Real FID + loading/error states
+7. ✅ `app/profile/page.tsx` - Real FID + loading/error states
+8. ✅ `public/og-image.png` - Resized to 1200x630
+9. ✅ `public/embed-image.png` - Resized to 945x630
+10. ✅ `public/hero-image.png` - Resized to 1200x630
+
+**Results:**
+- ✅ SDK initialized correctly
+- ✅ `sdk.actions.ready()` called successfully
+- ✅ Real FID from Farcaster user
+- ✅ Embed metadata valid
+- ✅ All image dimensions correct
+- ✅ App launches in Farcaster
+- ✅ No "Ready not called" error
+- ✅ Professional loading states
+- ✅ Graceful error handling
+
+---
+
+## 📊 Current Status (November 1, 2025)
+
+**MVP Completion:** ✅ 100%
+**Farcaster Integration:** ✅ 100%
+**Production Ready:** ✅ YES
+
+### Key Metrics
+- **Total Development Time:** ~5 weeks
+- **Code Lines:** ~6,000+ lines
+- **Components:** 15+ React components
+- **API Routes:** 3 functional endpoints
+- **Pages:** 5 fully functional pages
+- **Achievements:** 10 implemented
+- **Files Modified Today:** 10+ files
+- **Build Errors Fixed:** 6 major issues
+- **Deploy Time:** ~2 minutes (Vercel)
+
+### Integration Checklist
+- [x] Farcaster SDK installed
+- [x] Provider component created
+- [x] Custom hook implemented
+- [x] All pages updated with real FID
+- [x] Loading states added
+- [x] Error states added
+- [x] Embed metadata configured
+- [x] All images resized correctly
+- [x] Build successful
+- [x] Deployed to production
+- [x] Manifest validated
+- [x] Ready() call working
+- [x] App launches in Farcaster
+
+---
+
+## 🎯 Next Steps (Upcoming)
+
+### Immediate (This Week)
+- [ ] Test app with real Farcaster users
+- [ ] Monitor for bugs in production
+- [ ] Gather user feedback
+- [ ] Fix any edge cases
+
+### Phase 4 (Q1 2025)
+- [ ] NFT minting integration (ERC-721)
+- [ ] Wallet connection (OnchainKit)
+- [ ] Smart contract deployment on Base
+- [ ] Transaction signing for capsule locking
+- [ ] On-chain achievement NFTs
+
+### Phase 5 (Q2 2025)
+- [ ] Social features (feed, likes, comments)
+- [ ] Share to Farcaster cast
+- [ ] Public capsules option
+- [ ] Follow system
+- [ ] Enhanced analytics
+
+---
+
+## 🏆 Lessons Learned
+
+### Technical Insights
+1. **SDK Integration:** Always check SDK exports before TypeScript types
+2. **Build Errors:** Inline styles more reliable than Tailwind for universal components
+3. **Image Dimensions:** Farcaster is strict about 1.91:1 aspect ratio (1200x630, 945x630)
+4. **Metadata:** Server components only - never in 'use client' components
+5. **Ready Call:** Must await `sdk.actions.ready({})` for proper initialization
+
+### Development Process
+1. **Incremental Testing:** Test each change before moving to next
+2. **Error Messages:** Read carefully - they're usually accurate
+3. **Documentation:** Follow official specs exactly (Farcaster manifest spec)
+4. **Backup Strategy:** Keep working versions before major changes
+5. **Deployment:** Vercel's instant preview is invaluable for debugging
+
+---
+
+**🎉 Base Box is now fully Farcaster-native and production-ready!**
+
+*Last Updated: November 1, 2025, 13:10 UTC*  
+*Status: 🟢 Live (basebox.vercel.app)*  
+*Next Milestone: User Testing & Feedback*
+
+---
+
+**Time remembers. Base keeps. 🔒💙**
+ENDOFFILE
+echo "✅ progress.md updated"
