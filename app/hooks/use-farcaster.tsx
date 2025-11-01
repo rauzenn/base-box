@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import sdk, { type FrameContext } from '@farcaster/frame-sdk';
+import sdk from '@farcaster/frame-sdk';
 
 export function useFarcaster() {
-  const [context, setContext] = useState<FrameContext | null>(null);
+  const [context, setContext] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
