@@ -11,7 +11,10 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
       try {
         const context = await sdk.context;
         console.log('Farcaster SDK loaded:', context);
-        sdk.actions.ready();
+        
+        // Ready with options
+        await sdk.actions.ready({});
+        
         setIsSDKLoaded(true);
         console.log('Base Box is ready!');
       } catch (error) {
