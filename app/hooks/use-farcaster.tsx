@@ -12,9 +12,9 @@ export function useFarcaster() {
       try {
         const ctx = await sdk.context;
         setContext(ctx);
-        console.log('📱 Farcaster context loaded:', ctx);
+        console.log('Farcaster context loaded:', ctx);
       } catch (error) {
-        console.error('❌ Failed to load Farcaster context:', error);
+        console.error('Failed to load Farcaster context:', error);
       } finally {
         setIsLoading(false);
       }

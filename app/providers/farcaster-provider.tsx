@@ -9,18 +9,13 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const load = async () => {
       try {
-        // Initialize Farcaster SDK
         const context = await sdk.context;
-        console.log('✅ Farcaster SDK loaded:', context);
-        
-        // ⭐ CRITICAL: Tell Farcaster the app is ready
+        console.log('Farcaster SDK loaded:', context);
         sdk.actions.ready();
-        
         setIsSDKLoaded(true);
-        console.log('🎉 Base Box is ready!');
+        console.log('Base Box is ready!');
       } catch (error) {
-        console.error('❌ Failed to load Farcaster SDK:', error);
-        // Even if SDK fails, still render the app (for development)
+        console.error('Failed to load Farcaster SDK:', error);
         setIsSDKLoaded(true);
       }
     };
@@ -28,10 +23,17 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     load();
   }, []);
 
-  // Show loading state while SDK initializes
   if (!isSDKLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#000814]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0052FF] mx-auto mb-4"></div>
-          <h2 className="text-white text-xl font-bold mb-2">Base Box</h2>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000814' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', border: '4px solid #0052FF', borderTop: '4px solid transparent', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
+          <h2 style={{ color: 'white', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px' }}>Base Box</h2>
+          <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
