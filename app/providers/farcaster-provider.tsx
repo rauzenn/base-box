@@ -10,15 +10,16 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     const load = async () => {
       try {
         const context = await sdk.context;
-        console.log('Farcaster SDK loaded:', context);
+        console.log('✅ Farcaster SDK loaded:', context);
         
-        // Ready with options
+        // AWAIT ready call
         await sdk.actions.ready({});
         
         setIsSDKLoaded(true);
-        console.log('Base Box is ready!');
+        console.log('🎉 Base Box is ready!');
       } catch (error) {
-        console.error('Failed to load Farcaster SDK:', error);
+        console.error('❌ Failed to load Farcaster SDK:', error);
+        // Still mark as loaded even on error
         setIsSDKLoaded(true);
       }
     };

@@ -11,6 +11,14 @@ interface Stats {
   totalUsers: number;
 }
 
+export const metadata = {
+  title: 'Base Box - Onchain Time Capsules',
+  description: 'Lock your memories onchain. Unlock them in the future.',
+  openGraph: {
+    images: ['/og-image.png'],
+  },
+};
+
 export default function HomePage() {
   const fid = 3;
   const createRipple = useRipple();
