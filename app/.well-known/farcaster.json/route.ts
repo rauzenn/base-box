@@ -4,7 +4,7 @@ export async function GET() {
   const baseUrl = 'https://basebox.vercel.app';
   
   const manifest = {
-    // Account association (FID: 569760) - UPDATED
+    // Account association (VERIFIED)
     accountAssociation: {
       header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGY3ZjU3OWQ3RTJlNEQ1MTZEN2FmMDc1ZDk0NzIyRTY1YmU3ZDM5MDYifQ",
       payload: "eyJkb21haW4iOiJiYXNlYm94LnZlcmNlbC5hcHAifQ",
@@ -22,11 +22,19 @@ export async function GET() {
       webhookUrl: `${baseUrl}/api/webhook`,
     },
     
+    // REQUIRED: Version (must be "next")
+    version: "next",
+    
+    // REQUIRED: Primary Category
+    primaryCategory: "social",
+    
+    // REQUIRED: Tags
+    tags: ["time-capsule", "memories", "base", "nft"],
+    
     // App metadata
     name: "Base Box",
     shortName: "Base Box",
     description: "Lock your memories onchain. Set unlock dates from 1 hour to 1 year. Collect achievements and mint NFTs on Base.",
-    version: "1.0.0",
     
     // Images
     imageUrl: `${baseUrl}/hero-image.png`,
@@ -35,17 +43,13 @@ export async function GET() {
     // Social
     domain: "basebox.vercel.app",
     homeUrl: baseUrl,
-    
-    // Categories
-    categories: ["social", "utility"],
-    keywords: ["time capsule", "base", "nft", "blockchain", "memories"],
   };
 
   return NextResponse.json(manifest, {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     },
   });
 }

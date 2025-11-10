@@ -1,28 +1,56 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import sdk from '@farcaster/miniapp-sdk';
 
 export function MiniAppProvider({ children }: { children: React.ReactNode }) {
+  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
+
   useEffect(() => {
-    const initSDK = async () => {
+    const initializeSDK = async () => {
       try {
         console.log('🔄 Initializing Farcaster SDK...');
         
-        // Wait for context to be available
+        // Wait for SDK context
         const context = await sdk.context;
-        console.log('📱 Farcaster Context loaded:', context);
+        console.log('📱 Context loaded:', context);
         
-        // Call ready immediately after context is loaded
-        await sdk.actions.ready({});
+        // Call ready - CRITICAL!
+        sdk.actions.ready();
         console.log('✅ SDK ready() called successfully!');
+        
+        setIsSDKLoaded(true);
       } catch (error) {
-        console.error('❌ SDK initialization error:', error);
+        console.error('❌ SDK initialization failed:', error);
+        // Still set loaded to true to show app
+        setIsSDKLoaded(true);
       }
     };
 
-    initSDK();
+    initializeSDK();
   }, []);
+
+  // Don't render children until SDK is ready
+  if (!isSDKLoaded) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#000814',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          border: '4px solid #0052FF',
+          borderTopColor: 'transparent',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }} />
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }
