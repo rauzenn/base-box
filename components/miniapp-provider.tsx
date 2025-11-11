@@ -1,56 +1,48 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import sdk from '@farcaster/miniapp-sdk';
 
 export function MiniAppProvider({ children }: { children: React.ReactNode }) {
-  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
-
   useEffect(() => {
-    const initializeSDK = async () => {
+    const initSDK = async () => {
       try {
-        console.log('🔄 Initializing Farcaster SDK...');
+        console.log('🔵 [MiniApp] Starting SDK initialization...');
         
-        // Wait for SDK context
+        // CRITICAL: Wait for context first
         const context = await sdk.context;
-        console.log('📱 Context loaded:', context);
+        console.log('✅ [MiniApp] Context loaded:', context);
         
-        // Call ready - CRITICAL!
+        // CRITICAL: Call ready() - this MUST happen
         sdk.actions.ready();
-        console.log('✅ SDK ready() called successfully!');
+        console.log('✅ [MiniApp] ready() called successfully!');
         
-        setIsSDKLoaded(true);
+        // Extra logging to verify
+        console.log('📊 [MiniApp] SDK state:', {
+          contextLoaded: !!context,
+          readyCalled: true,
+          timestamp: new Date().toISOString()
+        });
+        
       } catch (error) {
-        console.error('❌ SDK initialization failed:', error);
-        // Still set loaded to true to show app
-        setIsSDKLoaded(true);
+        console.error('❌ [MiniApp] SDK initialization failed:', error);
+        
+        // Still call ready() even if context fails
+        // This prevents splash screen from sticking
+        try {
+          sdk.actions.ready();
+          console.log('⚠️ [MiniApp] ready() called in error handler');
+        } catch (readyError) {
+          console.error('❌ [MiniApp] ready() also failed:', readyError);
+        }
       }
     };
 
-    initializeSDK();
+    // Start initialization immediately
+    initSDK();
   }, []);
 
-  // Don't render children until SDK is ready
-  if (!isSDKLoaded) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: '#000814',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{
-          width: '64px',
-          height: '64px',
-          border: '4px solid #0052FF',
-          borderTopColor: 'transparent',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-        }} />
-      </div>
-    );
-  }
-
+  // Always render children immediately
+  // Don't wait for SDK - let it initialize in background
   return <>{children}</>;
 }
