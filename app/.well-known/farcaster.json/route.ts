@@ -1,85 +1,49 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-static';
+
 export async function GET() {
-  const baseUrl = 'https://basebox.vercel.app';
-  
   const manifest = {
-    // REQUIRED: Account Association
     accountAssociation: {
-      header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGY3ZjU3OWQ3RTJlNEQ1MTZEN2FmMDc1ZDk0NzIyRTY1YmU3ZDM5MDYifQ",
+      header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDE5MTAzZEE1MkI5Q0FENDQ3MWRGOTk0ZmZCYTMwQTM2QzRjRDc2ZjUifQ",
       payload: "eyJkb21haW4iOiJiYXNlYm94LnZlcmNlbC5hcHAifQ",
-      signature: "WBiRz0TjMVgzBKGeQGcCq2vOQbf6QRrZpYnDg3TVYEt5yqEWGL9Ey14fXMLVnrZvbmYxiojPp1HO9gblx+qvHBw="
+      signature: "QWGXt6v00JXHTd2HWohiobFbJk5XGH8iShyq0dvxo1kibJFKBeD71t8nhnDRF6UZsgyk6sr9ssmYQLfh6Gv4ihs="
     },
-    
-    // REQUIRED: Frame Configuration
     frame: {
-      version: "next",
+      version: "next",  // ✅ Changed from "1" to "next"
       name: "Base Box",
-      iconUrl: `${baseUrl}/icon.png`,
-      splashImageUrl: `${baseUrl}/splash.png`,
+      iconUrl: "https://basebox.vercel.app/icon.png",
+      homeUrl: "https://basebox.vercel.app",
+      imageUrl: "https://basebox.vercel.app/og-image.png",
+      splashImageUrl: "https://basebox.vercel.app/splash.png",
       splashBackgroundColor: "#000814",
-      homeUrl: baseUrl,
+      webhookUrl: "https://basebox.vercel.app/api/webhook"
     },
-    
-    // REQUIRED: Version (must be "next")
-    version: "next",
-    
-    // REQUIRED: Primary Category (single string, not array)
-    primaryCategory: "social",
-    
-    // REQUIRED: Tags (array of strings)
-    tags: ["time-capsule", "memories", "base", "nft"],
-    
-    // App Metadata
-    name: "Base Box",
-    description: "Lock your memories onchain. Set unlock dates from 1 hour to 1 year. Collect achievements on Base.",
-    
-    // Images
-    imageUrl: `${baseUrl}/hero-image.png`,
-    iconUrl: `${baseUrl}/icon.png`,
-    
-    // URLs
-    homeUrl: baseUrl,
-    
-    // Optional but recommended: Screenshots
-    screenshots: [
-      {
-        url: `${baseUrl}/screenshots/create.png`,
-        label: "Create a time capsule"
-      },
-      {
-        url: `${baseUrl}/screenshots/capsules.png`,
-        label: "View your capsules"
-      },
-      {
-        url: `${baseUrl}/screenshots/reveal.png`,
-        label: "Reveal your memories"
-      }
-    ],
+    metadata: {
+      primaryCategory: "social",
+      tags: ["time-capsule", "blockchain", "base", "memories", "nft"]
+    }
   };
 
   return NextResponse.json(manifest, {
-    status: 200,
     headers: {
       'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=0, must-revalidate',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      // Force no cache for testing
-      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    },
+      'Access-Control-Allow-Headers': 'Content-Type'
+    }
   });
 }
 
+// Handle OPTIONS for CORS
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
+      'Access-Control-Allow-Headers': 'Content-Type'
+    }
   });
 }
