@@ -1,38 +1,63 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
-
+/**
+ * Farcaster Mini App Manifest
+ * Test version - minimal working config
+ */
 export async function GET() {
+  console.log('🔵 Manifest endpoint called:', new Date().toISOString());
+  
+  const baseUrl = 'https://basebox.vercel.app';
+  
   const manifest = {
+    // Account association - VERIFIED
     accountAssociation: {
-      header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDE5MTAzZEE1MkI5Q0FENDQ3MWRGOTk0ZmZCYTMwQTM2QzRjRDc2ZjUifQ",
+      header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGY3ZjU3OWQ3RTJlNEQ1MTZEN2FmMDc1ZDk0NzIyRTY1YmU3ZDM5MDYifQ",
       payload: "eyJkb21haW4iOiJiYXNlYm94LnZlcmNlbC5hcHAifQ",
-      signature: "QWGXt6v00JXHTd2HWohiobFbJk5XGH8iShyq0dvxo1kibJFKBeD71t8nhnDRF6UZsgyk6sr9ssmYQLfh6Gv4ihs="
+      signature: "WBiRz0TjMVgzBKGeQGcCq2vOQbf6QRrZpYnDg3TVYEt5yqEWGL9Ey14fXMLVnrZvbmYxiojPp1HO9gblx+qvHBw="
     },
+    
+    // REQUIRED: Version
+    version: "next",
+    
+    // REQUIRED: Primary Category
+    primaryCategory: "social",
+    
+    // REQUIRED: Tags (array of strings)
+    tags: ["time-capsule", "memories", "base"],
+    
+    // Frame config
     frame: {
-      version: "next",  // ✅ Changed from "1" to "next"
+      version: "next",
       name: "Base Box",
-      iconUrl: "https://basebox.vercel.app/icon.png",
-      homeUrl: "https://basebox.vercel.app",
-      imageUrl: "https://basebox.vercel.app/og-image.png",
-      splashImageUrl: "https://basebox.vercel.app/splash.png",
+      iconUrl: `${baseUrl}/icon.png`,
+      splashImageUrl: `${baseUrl}/splash.png`,
       splashBackgroundColor: "#000814",
-      webhookUrl: "https://basebox.vercel.app/api/webhook"
+      homeUrl: baseUrl,
     },
-    metadata: {
-      primaryCategory: "social",
-      tags: ["time-capsule", "blockchain", "base", "memories", "nft"]
-    }
+    
+    // App info
+    name: "Base Box",
+    description: "Lock your memories onchain",
+    imageUrl: `${baseUrl}/hero-image.png`,
+    homeUrl: baseUrl,
   };
 
+  // Log manifest to Vercel logs
+  console.log('📦 Manifest:', JSON.stringify(manifest, null, 2));
+
   return NextResponse.json(manifest, {
+    status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=0, must-revalidate',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    }
+      'Access-Control-Allow-Headers': 'Content-Type',
+      // NO CACHE - force fresh data
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
   });
 }
 
@@ -43,7 +68,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    }
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
   });
 }

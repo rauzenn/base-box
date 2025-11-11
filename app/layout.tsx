@@ -8,25 +8,33 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+const baseUrl = 'https://basebox.vercel.app';
+
 export const metadata: Metadata = {
-  title: 'Base Box - Time Capsules on Base',
-  description: 'Lock messages for your future self on Base blockchain',
+  title: 'Base Box - Onchain Time Capsules',
+  description: 'Lock your memories onchain. Set unlock dates from 1 hour to 1 year. Built on Base.',
+  metadataBase: new URL(baseUrl),
+  
   openGraph: {
-    title: 'Base Box',
-    description: 'Lock messages for your future self on Base blockchain',
-    images: [{
-      url: 'https://basebox.vercel.app/og-image.png',
-      width: 1200,
-      height: 800,
-    }],
+    title: 'Base Box - Time Capsules',
+    description: 'Lock memories onchain on Base',
+    url: baseUrl,
+    siteName: 'Base Box',
+    images: [{ url: '/og-image.png', width: 1200, height: 800 }],
+    locale: 'en_US',
+    type: 'website',
   },
-  other: {
-    // Farcaster Mini App metadata
-    'fc:frame': 'vNext',
-    'fc:frame:image': 'https://basebox.vercel.app/og-image.png',
-    'fc:frame:button:1': 'Launch Base Box',
-    'fc:frame:button:1:action': 'link',
-    'fc:frame:button:1:target': 'https://basebox.vercel.app',
+  
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Base Box',
+    description: 'Lock memories onchain',
+    images: ['/og-image.png'],
+  },
+  
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
   },
 };
 
@@ -35,20 +43,15 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Static embed JSON - no JSON.stringify issues
+  const embedJson = `{"version":"next","imageUrl":"${baseUrl}/embed-image.png","button":{"title":"Launch Base Box","action":{"type":"launch_frame","name":"Base Box","url":"${baseUrl}","splashImageUrl":"${baseUrl}/splash.png","splashBackgroundColor":"#000814"}}}`;
+
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        {/* Farcaster Mini App Metadata */}
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://basebox.vercel.app/og-image.png" />
-        <meta property="fc:frame:button:1" content="Launch Base Box" />
-        <meta property="fc:frame:button:1:action" content="link" />
-        <meta property="fc:frame:button:1:target" content="https://basebox.vercel.app" />
-        
-        {/* Additional OG tags */}
-        <meta property="og:title" content="Base Box - Time Capsules on Base" />
-        <meta property="og:description" content="Lock messages for your future self on Base blockchain" />
-        <meta property="og:image" content="https://basebox.vercel.app/og-image.png" />
+        {/* CRITICAL: fc:miniapp meta tag */}
+        <meta name="fc:miniapp" content={embedJson} />
+        <meta name="fc:frame" content={embedJson} />
       </head>
       <body className={inter.className}>
         <MiniAppProvider>
