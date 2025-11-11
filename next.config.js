@@ -17,10 +17,6 @@ const nextConfig = {
               "frame-ancestors 'self' https://*.warpcast.com https://*.farcaster.xyz https://*.coinbase.com https://www.coinbase.com"
             ].join('; '),
           },
-          {
-            key: 'X-Frame-Options',
-            value: 'ALLOW-FROM https://warpcast.com',
-          },
         ],
       },
     ];
