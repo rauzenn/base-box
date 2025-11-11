@@ -10,6 +10,22 @@ const inter = Inter({
 
 const baseUrl = 'https://basebox.vercel.app';
 
+// Embed metadata for social sharing (CRITICAL!)
+const embedMetadata = {
+  version: "next",
+  imageUrl: `${baseUrl}/embed-image.png`, // Must be 3:2 aspect ratio!
+  button: {
+    title: "Launch Base Box",
+    action: {
+      type: "launch_frame",
+      name: "Base Box",
+      url: baseUrl,
+      splashImageUrl: `${baseUrl}/splash.png`,
+      splashBackgroundColor: "#000814"
+    }
+  }
+};
+
 export const metadata: Metadata = {
   title: 'Base Box - Onchain Time Capsules',
   description: 'Lock your memories onchain. Set unlock dates from 1 hour to 1 year. Built on Base.',
@@ -25,7 +41,6 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Base Box - Time Capsules on Base',
       },
     ],
     locale: 'en_US',
@@ -34,8 +49,8 @@ export const metadata: Metadata = {
   
   twitter: {
     card: 'summary_large_image',
-    title: 'Base Box - Time Capsules',
-    description: 'Lock memories onchain on Base',
+    title: 'Base Box',
+    description: 'Lock memories onchain',
     images: ['/og-image.png'],
   },
   
@@ -44,13 +59,10 @@ export const metadata: Metadata = {
     apple: '/icon.png',
   },
   
+  // CRITICAL: fc:miniapp and fc:frame meta tags
   other: {
-    'fc:frame': 'vNext',
-    'fc:frame:image': `${baseUrl}/embed-image.png`,
-    'fc:frame:image:aspect_ratio': '1.91:1',
-    'fc:frame:button:1': 'Launch Base Box',
-    'fc:frame:button:1:action': 'link',
-    'fc:frame:button:1:target': baseUrl,
+    'fc:miniapp': JSON.stringify(embedMetadata),
+    'fc:frame': JSON.stringify(embedMetadata), // Backward compatibility
   },
 };
 
@@ -62,19 +74,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        {/* Frame meta tags */}
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content={`${baseUrl}/embed-image.png`} />
-        <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-        <meta property="fc:frame:button:1" content="Launch Base Box" />
-        <meta property="fc:frame:button:1:action" content="link" />
-        <meta property="fc:frame:button:1:target" content={baseUrl} />
-        
-        {/* OG meta tags */}
-        <meta property="og:title" content="Base Box - Time Capsules" />
-        <meta property="og:description" content="Lock memories onchain on Base" />
-        <meta property="og:image" content={`${baseUrl}/og-image.png`} />
-        <meta property="og:url" content={baseUrl} />
+        {/* CRITICAL: Embed metadata for Farcaster */}
+        <meta name="fc:miniapp" content={JSON.stringify(embedMetadata)} />
+        <meta name="fc:frame" content={JSON.stringify(embedMetadata)} />
       </head>
       <body className={inter.className}>
         <MiniAppProvider>
