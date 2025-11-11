@@ -10,22 +10,6 @@ const inter = Inter({
 
 const baseUrl = 'https://basebox.vercel.app';
 
-// Embed metadata for social sharing (CRITICAL!)
-const embedMetadata = {
-  version: "next",
-  imageUrl: `${baseUrl}/embed-image.png`, // Must be 3:2 aspect ratio!
-  button: {
-    title: "Launch Base Box",
-    action: {
-      type: "launch_frame",
-      name: "Base Box",
-      url: baseUrl,
-      splashImageUrl: `${baseUrl}/splash.png`,
-      splashBackgroundColor: "#000814"
-    }
-  }
-};
-
 export const metadata: Metadata = {
   title: 'Base Box - Onchain Time Capsules',
   description: 'Lock your memories onchain. Set unlock dates from 1 hour to 1 year. Built on Base.',
@@ -36,13 +20,7 @@ export const metadata: Metadata = {
     description: 'Lock memories onchain on Base',
     url: baseUrl,
     siteName: 'Base Box',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-      },
-    ],
+    images: [{ url: '/og-image.png', width: 1200, height: 800 }],
     locale: 'en_US',
     type: 'website',
   },
@@ -58,12 +36,6 @@ export const metadata: Metadata = {
     icon: '/icon.png',
     apple: '/icon.png',
   },
-  
-  // CRITICAL: fc:miniapp and fc:frame meta tags
-  other: {
-    'fc:miniapp': JSON.stringify(embedMetadata),
-    'fc:frame': JSON.stringify(embedMetadata), // Backward compatibility
-  },
 };
 
 export default function RootLayout({
@@ -71,12 +43,15 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Static embed JSON - no JSON.stringify issues
+  const embedJson = `{"version":"next","imageUrl":"${baseUrl}/embed-image.png","button":{"title":"Launch Base Box","action":{"type":"launch_frame","name":"Base Box","url":"${baseUrl}","splashImageUrl":"${baseUrl}/splash.png","splashBackgroundColor":"#000814"}}}`;
+
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        {/* CRITICAL: Embed metadata for Farcaster */}
-        <meta name="fc:miniapp" content={JSON.stringify(embedMetadata)} />
-        <meta name="fc:frame" content={JSON.stringify(embedMetadata)} />
+        {/* CRITICAL: fc:miniapp meta tag */}
+        <meta name="fc:miniapp" content={embedJson} />
+        <meta name="fc:frame" content={embedJson} />
       </head>
       <body className={inter.className}>
         <MiniAppProvider>
