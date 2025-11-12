@@ -1,4 +1,4 @@
-// lib/basenames.ts - Basenames Integration for Based Streaks
+// lib/basenames.ts - Basenames Integration for Base Box
 
 import { createPublicClient, http, namehash } from 'viem';
 import { base } from 'viem/chains';

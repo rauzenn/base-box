@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Lock, Clock, Calendar, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { useRipple, createSparkles } from '@/components/animations/effects';
 import BottomNav from '@/components/ui/bottom-nav';
-import { useFarcaster } from '../hooks/use-farcaster';
+import { useFarcaster } from '@/hooks/use-farcaster';
 
 interface Capsule {
   id: string;

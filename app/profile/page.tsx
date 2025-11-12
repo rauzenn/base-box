@@ -6,7 +6,7 @@ import { useRipple, createSparkles } from '@/components/animations/effects';
 import { AchievementCard } from '@/components/ui/achievement-card';
 import { BadgeShowcase } from '@/components/ui/badge-showcase';
 import BottomNav from '@/components/ui/bottom-nav';
-import { useFarcaster } from '../hooks/use-farcaster';
+import { useFarcaster } from '@/hooks/use-farcaster';
 
 interface Stats {
   totalCapsules: number;

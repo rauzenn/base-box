@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X } from 'lucide-react';
 import { AchievementToast, useAchievements } from '@/components/ui/achievement-toast';
-import { useFarcaster } from '../hooks/use-farcaster';
+import { useFarcaster } from '@/hooks/use-farcaster';
 import BottomNav from '@/components/ui/bottom-nav';
 
 const durations = [
