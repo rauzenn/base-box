@@ -1,74 +1,96 @@
 import { NextResponse } from 'next/server';
 
-/**
- * Farcaster Mini App Manifest
- * Test version - minimal working config
- */
+export const dynamic = 'force-static';
+
 export async function GET() {
-  console.log('🔵 Manifest endpoint called:', new Date().toISOString());
-  
-  const baseUrl = 'https://basebox.vercel.app';
+  const appUrl = 'https://basebox.vercel.app';
   
   const manifest = {
-    // Account association - VERIFIED
     accountAssociation: {
-      header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGY3ZjU3OWQ3RTJlNEQ1MTZEN2FmMDc1ZDk0NzIyRTY1YmU3ZDM5MDYifQ",
+      header: "eyJmaWQiOjU2OTc2MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDE5MTAzZEE1MkI5Q0FENDQ3MWRGOTk0ZmZCYTMwQTM2QzRjRDc2ZjUifQ",
       payload: "eyJkb21haW4iOiJiYXNlYm94LnZlcmNlbC5hcHAifQ",
-      signature: "WBiRz0TjMVgzBKGeQGcCq2vOQbf6QRrZpYnDg3TVYEt5yqEWGL9Ey14fXMLVnrZvbmYxiojPp1HO9gblx+qvHBw="
+      signature: "QWGXt6v00JXHTd2HWohiobFbJk5XGH8iShyq0dvxo1kibJFKBeD71t8nhnDRF6UZsgyk6sr9ssmYQLfh6Gv4ihs="
     },
-    
-    // REQUIRED: Version
-    version: "next",
-    
-    // REQUIRED: Primary Category
-    primaryCategory: "social",
-    
-    // REQUIRED: Tags (array of strings)
-    tags: ["time-capsule", "memories", "base"],
-    
-    // Frame config
     frame: {
-      version: "next",
+      // ============================================
+      // REQUIRED FIELDS
+      // ============================================
+      version: "next", // ✅ Base requires "next"
       name: "Base Box",
-      iconUrl: `${baseUrl}/icon.png`,
-      splashImageUrl: `${baseUrl}/splash.png`,
-      splashBackgroundColor: "#000814",
-      homeUrl: baseUrl,
-    },
-    
-    // App info
-    name: "Base Box",
-    description: "Lock your memories onchain",
-    imageUrl: `${baseUrl}/hero-image.png`,
-    homeUrl: baseUrl,
+      iconUrl: `${appUrl}/icon.png`, // 512x512px
+      homeUrl: appUrl,
+      
+      // ============================================
+      // DISPLAY & BRANDING
+      // ============================================
+      imageUrl: `${appUrl}/og-image.png`, // 1200x630 (1.91:1)
+      splashImageUrl: `${appUrl}/splash.png`, // 512x512px
+      splashBackgroundColor: "#000814", // Dark blue Base Box theme
+      
+      // ============================================
+      // DESCRIPTIONS (Character Limits)
+      // ============================================
+      subtitle: "Lock memories onchain", // Max 32 chars ✅
+      description: "Time-locked capsules on Base blockchain. Lock your messages and memories with custom unlock dates. Collect achievement NFTs as you build your digital time capsule collection.", // Max 256 chars ✅
+      tagline: "Time remembers. Base keeps.", // Max 32 chars ✅
+      
+      // ============================================
+      // OPEN GRAPH METADATA
+      // ============================================
+      ogTitle: "Base Box - Time Capsules", // Max 32 chars ✅
+      ogDescription: "Lock your memories onchain and unlock them in the future on Base blockchain", // Max 128 chars ✅
+      ogImageUrl: `${appUrl}/og-image.png`, // 1200x630
+      heroImageUrl: `${appUrl}/hero-image.png`, // 1200x630
+      
+      // ============================================
+      // SCREENSHOTS (iPhone 13 Pro Max size)
+      // ============================================
+      screenshotUrls: [
+        `${appUrl}/screenshots/create.png`, // 1284x2778
+        `${appUrl}/screenshots/capsules.png`, // 1284x2778
+        `${appUrl}/screenshots/reveal.png` // 1284x2778
+      ],
+      
+      // ============================================
+      // BUTTON CONFIGURATION
+      // ============================================
+      buttonTitle: "Launch Base Box", // Max 32 chars ✅
+      button: {
+        title: "Launch Base Box",
+        action: {
+          type: "launch_frame",
+          name: "Base Box",
+          url: appUrl,
+          splashImageUrl: `${appUrl}/splash.png`,
+          splashBackgroundColor: "#000814"
+        }
+      },
+      
+      // ============================================
+      // WEBHOOK (for notifications)
+      // ============================================
+      webhookUrl: `${appUrl}/api/webhook`,
+      
+      // ============================================
+      // CATEGORY & TAGS
+      // ============================================
+      primaryCategory: "utility", // Options: social, game, utility, defi, nft
+      tags: [
+        "time-capsule",
+        "blockchain", 
+        "base",
+        "memories",
+        "nft",
+        "achievements",
+        "onchain"
+      ]
+    }
   };
 
-  // Log manifest to Vercel logs
-  console.log('📦 Manifest:', JSON.stringify(manifest, null, 2));
-
   return NextResponse.json(manifest, {
-    status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      // NO CACHE - force fresh data
-      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    },
-  });
-}
-
-// Handle OPTIONS for CORS
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
+      'Cache-Control': 'public, max-age=3600, must-revalidate' // Cache 1 hour
+    }
   });
 }
