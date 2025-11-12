@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { MiniAppProvider } from '@/components/miniapp-provider';
+import { FarcasterProvider } from '@/app/providers/farcaster-provider';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -59,5 +60,11 @@ export default function RootLayout({
         </MiniAppProvider>
       </body>
     </html>
-  );
+    );
+    <body>
+  <FarcasterProvider>
+    {children}
+  </FarcasterProvider>
+</body>
 }
+
