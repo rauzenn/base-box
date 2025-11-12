@@ -15,7 +15,7 @@ export async function GET() {
       // ============================================
       // REQUIRED FIELDS
       // ============================================
-      version: "next", // ✅ Base requires "next"
+      version: "1", // ✅ MUST BE "1" for Base Build
       name: "Base Box",
       iconUrl: `${appUrl}/icon.png`, // 512x512px
       homeUrl: appUrl,
@@ -75,14 +75,14 @@ export async function GET() {
       // CATEGORY & TAGS
       // ============================================
       primaryCategory: "utility", // Options: social, game, utility, defi, nft
+      
+      // ✅ FIXED: Max 5 tags, lowercase, no special chars, max 20 chars each
       tags: [
-        "time-capsule",
-        "blockchain", 
-        "base",
-        "memories",
-        "nft",
-        "achievements",
-        "onchain"
+        "timecapsule",  // 11 chars ✅ (removed hyphen)
+        "blockchain",   // 10 chars ✅
+        "base",         // 4 chars ✅
+        "memories",     // 8 chars ✅
+        "nft"           // 3 chars ✅
       ]
     }
   };
