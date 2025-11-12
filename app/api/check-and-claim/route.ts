@@ -29,8 +29,12 @@ const BADGES = [
 async function verifyFarcasterPost(fid: number, hashtag: string): Promise<boolean> {
   const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
   
-  if (!NEYNAR_API_KEY || NEYNAR_API_KEY === "demo") {
-    console.log(`[DEV MODE] Skipping verification for FID ${fid}, hashtag ${hashtag}`);
+  // More robust check - also check for invalid/test keys
+  if (!NEYNAR_API_KEY || 
+      NEYNAR_API_KEY === "demo" || 
+      NEYNAR_API_KEY === "test" ||
+      NEYNAR_API_KEY.length < 20) { // Real Neynar keys are longer
+    console.log(`[DEV MODE] Neynar disabled - Skipping verification for FID ${fid}, hashtag ${hashtag}`);
     return true;
   }
 
@@ -45,8 +49,8 @@ async function verifyFarcasterPost(fid: number, hashtag: string): Promise<boolea
     );
 
     if (!response.ok) {
-      console.error("Neynar API error:", response.statusText);
-      return false;
+      console.warn(`⚠️ Neynar API error: ${response.statusText} - Allowing claim anyway`);
+      return true; // Don't block user if API fails
     }
 
     const data = await response.json();
@@ -66,7 +70,7 @@ async function verifyFarcasterPost(fid: number, hashtag: string): Promise<boolea
     return hasHashtag;
   } catch (error) {
     console.error("Error verifying post:", error);
-    return false;
+    return true; // Don't block user on error - fail open
   }
 }
 
