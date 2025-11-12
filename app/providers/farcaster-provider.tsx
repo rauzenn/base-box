@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { sdk } from '@farcaster/frame-sdk';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
@@ -11,11 +11,11 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🔄 Initializing Farcaster SDK...');
         
-        // CRITICAL: Call ready() FIRST, before accessing context
+        // CRITICAL: Call ready() FIRST
         await sdk.actions.ready();
         console.log('✅ Ready signal sent successfully!');
         
-        // Now access context (no await needed in newer SDK)
+        // Access context (no await in newer SDK)
         const context = sdk.context;
         console.log('✅ Farcaster context:', context);
         
@@ -33,7 +33,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
           console.error('❌ Retry failed:', retryError);
         }
         
-        // Still render app even if SDK fails
+        // Still render app
         setIsSDKLoaded(true);
       }
     };
@@ -57,15 +57,8 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
             border: '4px solid #0052FF', 
             borderTop: '4px solid transparent', 
             borderRadius: '50%', 
-            margin: '0 auto 16px', 
-            animation: 'spin 1s linear infinite' 
-          }} />
-          <style jsx>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
+            margin: '0 auto 16px' 
+          }} className="animate-spin" />
           <h2 style={{ 
             color: 'white', 
             fontSize: '20px', 
