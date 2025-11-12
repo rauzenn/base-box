@@ -1,14 +1,29 @@
 import { NextResponse } from 'next/server';
-import { getUser, getUserParticipation, getUserRank } from '@/lib/kv';
+import { 
+  getUser, 
+  getUserCapsules,  // ✅ Doğru fonksiyon adı (listUserCapsules değil)
+  getUserAchievements, 
+  getUserRank 
+} from '@/lib/kv';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
+
+// Type definition for Capsule
+interface Capsule {
+  id: string;
+  fid: number;
+  message: string;
+  image?: string;
+  createdAt: string;
+  unlockDate: string;
+  revealed: boolean;
+}
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const fid = searchParams.get('fid');
-    const seasonId = searchParams.get('seasonId') || 'season_1';
 
     if (!fid) {
       return NextResponse.json(
@@ -29,29 +44,49 @@ export async function GET(request: Request) {
       );
     }
 
-    // Get participation data
-    const participation = await getUserParticipation(fidNum, seasonId);
+    // Get user capsules - ✅ getUserCapsules kullan
+    const capsules: Capsule[] = await getUserCapsules(fidNum);
     
-    // Get rank
-    const rank = await getUserRank(seasonId, fidNum);
+    // Get achievements
+    const achievements = await getUserAchievements(fidNum);
+    
+    // Get leaderboard rank
+    const rank = await getUserRank(fidNum);
+
+    // Calculate stats
+    const totalCapsules = capsules.length;
+    const revealedCapsules = capsules.filter((c: Capsule) => c.revealed).length; // ✅ Type eklendi
+    const lockedCapsules = totalCapsules - revealedCapsules;
+    
+    // Find longest lock duration
+    let longestDuration = 0;
+    capsules.forEach((capsule: Capsule) => { // ✅ Type eklendi
+      const duration = new Date(capsule.unlockDate).getTime() - new Date(capsule.createdAt).getTime();
+      if (duration > longestDuration) {
+        longestDuration = duration;
+      }
+    });
 
     return NextResponse.json({
       ok: true,
       user: {
         fid: user.fid,
-        displayName: user.displayName,
-        username: user.username,
-        avatarUrl: user.avatarUrl,
-        walletAddress: user.walletAddress
+        joinedAt: user.joinedAt
       },
-      currentSeason: {
-        id: seasonId,
-        totalXp: participation?.totalXp || 0,
-        currentStreak: participation?.currentStreak || 0,
-        longestStreak: participation?.longestStreak || 0,
-        badges: participation?.badges || [],
-        rank: rank || null
-      }
+      stats: {
+        totalCapsules,
+        lockedCapsules,
+        revealedCapsules,
+        longestDuration, // milliseconds
+        achievementsUnlocked: achievements.length,
+        leaderboardRank: rank
+      },
+      recentCapsules: capsules
+        .sort((a: Capsule, b: Capsule) => // ✅ Type eklendi
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+        .slice(0, 5), // Last 5 capsules
+      achievements
     });
   } catch (error) {
     console.error('GET /api/user error:', error);
