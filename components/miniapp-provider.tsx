@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import sdk from '@farcaster/miniapp-sdk';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 export function MiniAppProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
@@ -12,20 +12,27 @@ export function MiniAppProvider({ children }: { children: React.ReactNode }) {
     const init = async () => {
       try {
         console.log('🔄 [MiniApp] Initializing SDK...');
-        
-        // CRITICAL: Wait for context first
-        const context = await sdk.context;
-        console.log('📱 [MiniApp] Context loaded:', context);
-        
+
+        // Signal host immediately to hide splash; do not block on context
+        try {
+          await sdk.actions.ready();
+        } catch (_) {
+          // ignore
+        }
+
+        // Then best-effort context load (optional)
+        try {
+          const context = await sdk.context;
+          console.log('📱 [MiniApp] Context loaded:', context);
+        } catch (err) {
+          console.log('ℹ️ [MiniApp] Context not available yet:', err);
+        }
+
         if (!mounted) return;
-        
-        // CRITICAL: Call ready WITHOUT parameters
-        sdk.actions.ready();
         console.log('✅ [MiniApp] SDK ready() called!');
-        
-        // Mark as ready
+
+        // Mark UI as ready regardless
         setIsReady(true);
-        
       } catch (error) {
         console.error('❌ [MiniApp] Init error:', error);
         // Still mark as ready to show app
