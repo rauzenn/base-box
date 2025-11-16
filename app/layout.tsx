@@ -3,13 +3,14 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { MiniAppProvider } from '@/components/miniapp-provider';
 import { FarcasterProvider } from '@/app/providers/farcaster-provider';
+import { MiniAppBootstrap } from '@/components/miniapp-bootstrap';
 
 const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-inter',
 });
 
-const baseUrl = 'https://basebox.vercel.app';
+const baseUrl = 'https://base-box.vercel.app';
 
 export const metadata: Metadata = {
   title: 'Base Box - Onchain Time Capsules',
@@ -55,17 +56,15 @@ export default function RootLayout({
         <meta name="fc:frame" content={embedJson} />
       </head>
       <body className={inter.className}>
+        <MiniAppBootstrap />
         <MiniAppProvider>
-          {children}
+          <FarcasterProvider>
+            {children}
+          </FarcasterProvider>
         </MiniAppProvider>
       </body>
     </html>
     );
-    <body>
-  <FarcasterProvider>
-    {children}
-  </FarcasterProvider>
-</body>
 
 }
 
