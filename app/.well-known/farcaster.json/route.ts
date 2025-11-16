@@ -31,7 +31,7 @@ export async function GET() {
       // DESCRIPTIONS (Character Limits)
       // ============================================
       subtitle: "Lock memories onchain", // Max 32 chars ✅
-      description: "Time-locked capsules on Base blockchain. Lock your messages and memories with custom unlock dates. Collect achievement NFTs as you build your digital time capsule collection.", // Max 256 chars ✅
+      description: description: "Lock messages and memories onchain with custom unlock dates. Build your time capsule collection and earn achievement NFTs on Base blockchain."
       tagline: "Time remembers. Base keeps.", // Max 32 chars ✅
       
       // ============================================
