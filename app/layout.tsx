@@ -10,7 +10,7 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
-const baseUrl = 'https://base-box.vercel.app';
+const baseUrl = 'https://basebox.vercel.app';
 
 export const metadata: Metadata = {
   title: 'Base Box - Onchain Time Capsules',
