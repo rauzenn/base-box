@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Calendar, Lock, Unlock, Trophy, TrendingUp, Sparkles, Award, Gift } from 'lucide-react';
+import { User, Calendar, Lock, Unlock, Trophy, TrendingUp, Sparkles, Award, Gift, Wallet as WalletIcon, Copy, ExternalLink } from 'lucide-react';
 import { useRipple, createSparkles } from '@/components/animations/effects';
 import { AchievementCard } from '@/components/ui/achievement-card';
 import { BadgeShowcase } from '@/components/ui/badge-showcase';
 import BottomNav from '@/components/ui/bottom-nav';
 import { useFarcaster } from '@/hooks/use-farcaster';
+import { useWallet } from '@/hooks/usewallet';
 
 interface Stats {
   totalCapsules: number;
@@ -29,6 +30,7 @@ interface Achievement {
 
 export default function ProfilePage() {
   const { fid, isLoading } = useFarcaster();
+  const { address, isConnected, balance } = useWallet();
   const createRipple = useRipple();
   const [stats, setStats] = useState<Stats>({
     totalCapsules: 0,
@@ -38,6 +40,7 @@ export default function ProfilePage() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [unclaimedCount, setUnclaimedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -98,6 +101,14 @@ export default function ProfilePage() {
 
   const levelInfo = getAchievementLevel();
   const lockedCapsules = stats.totalCapsules - stats.revealedCapsules;
+
+  const handleCopyAddress = async () => {
+    if (address) {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
 // Loading state
 if (isLoading) {
@@ -257,6 +268,67 @@ if (!fid) {
             createRipple={createRipple}
           />
         </div>
+
+        {/* Wallet Info Card */}
+        {isConnected && address && (
+          <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-6 mb-6 card-hover" style={{ animationDelay: '0.5s' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+                <WalletIcon className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-black text-white">Wallet Connected</h3>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-sm text-green-400 font-medium">Active</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-xl p-4 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-400 font-bold uppercase">Wallet Address</span>
+                <button
+                  onClick={handleCopyAddress}
+                  className="flex items-center gap-1 px-2 py-1 bg-[#0052FF]/20 hover:bg-[#0052FF]/30 border border-[#0052FF]/30 rounded-lg transition-all"
+                >
+                  <Copy className="w-3 h-3 text-[#0052FF]" />
+                  <span className="text-xs text-[#0052FF] font-bold">
+                    {copied ? 'Copied!' : 'Copy'}
+                  </span>
+                </button>
+              </div>
+              <p className="text-white font-mono text-sm break-all">
+                {address}
+              </p>
+            </div>
+
+            {/* Balance */}
+            {balance !== null && (
+              <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-2 border-[#0052FF]/30 rounded-xl p-4 mb-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400 font-bold">Balance</span>
+                  <div className="text-right">
+                    <p className="text-xl font-black text-white">{parseFloat(balance).toFixed(4)} ETH</p>
+                    <p className="text-xs text-gray-400 font-medium">on Base</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BaseScan Link */}
+            <a
+              href={`https://basescan.org/address/${address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#1A1F2E] hover:bg-[#0052FF]/20 border-2 border-[#0052FF]/20 hover:border-[#0052FF] rounded-xl transition-all group"
+            >
+              <span className="text-sm text-gray-300 group-hover:text-white font-bold">View on BaseScan</span>
+              <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-[#0052FF]" />
+            </a>
+          </div>
+        )}
 
         {/* Unclaimed Alert */}
         {unclaimedCount > 0 && (

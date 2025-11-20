@@ -6,7 +6,6 @@ import { useRipple, createSparkles } from '@/components/animations/effects';
 import BottomNav from '@/components/ui/bottom-nav';
 import { useWallet } from '@/hooks/usewallet';
 import { WalletModal } from '@/components/wallet/WalletModal';
-import { WalletDropdown } from '@/components/wallet/WalletDropdown';
 import { SettingsModal } from '@/components/settings/settingsmodal';
 import { encodeFunctionData } from 'viem';
 import type { Address as AddressType } from 'viem';
@@ -188,9 +187,14 @@ export default function RevealsPage() {
 
             {/* Right Side: Wallet + Settings */}
             <div className="flex items-center gap-3">
-              {/* Wallet Button or Dropdown */}
-              {isConnected ? (
-                <WalletDropdown />
+              {/* Simple Wallet Status */}
+              {isConnected && address ? (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-green-500/10 border-2 border-green-500/30 rounded-xl">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-green-400 font-bold text-sm">
+                    {address.slice(0, 6)}...{address.slice(-4)}
+                  </span>
+                </div>
               ) : (
                 <button
                   onClick={() => setIsWalletModalOpen(true)}

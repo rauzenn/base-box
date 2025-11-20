@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, X, Sun, Moon, Globe, Info, MessageSquare } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -11,6 +11,45 @@ interface SettingsModalProps {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [language, setLanguage] = useState<'en' | 'tr'>('en');
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('basebox_theme') as 'light' | 'dark' | null;
+    const savedLanguage = localStorage.getItem('basebox_language') as 'en' | 'tr' | null;
+    
+    if (savedTheme) setTheme(savedTheme);
+    if (savedLanguage) setLanguage(savedLanguage);
+  }, []);
+
+  // Handle theme change
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+    localStorage.setItem('basebox_theme', newTheme);
+    
+    // Apply theme to body
+    if (newTheme === 'light') {
+      document.body.classList.add('light-theme');
+      document.body.classList.remove('dark-theme');
+    } else {
+      document.body.classList.add('dark-theme');
+      document.body.classList.remove('light-theme');
+    }
+    
+    console.log(`🎨 Theme changed to: ${newTheme}`);
+  };
+
+  // Handle language change
+  const handleLanguageChange = (newLanguage: 'en' | 'tr') => {
+    setLanguage(newLanguage);
+    localStorage.setItem('basebox_language', newLanguage);
+    console.log(`🌐 Language changed to: ${newLanguage}`);
+    // TODO: Implement i18n translation system
+  };
+
+  // Handle feedback
+  const handleFeedback = () => {
+    window.open('https://github.com/rauzenn/base-box/issues/new', '_blank');
+  };
 
   if (!isOpen) return null;
 
@@ -46,7 +85,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
             <div className="space-y-2">
               <button
-                onClick={() => setTheme('light')}
+                onClick={() => handleThemeChange('light')}
                 className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
                   theme === 'light'
                     ? 'bg-[#0052FF] border-2 border-[#0052FF]'
@@ -67,7 +106,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </button>
 
               <button
-                onClick={() => setTheme('dark')}
+                onClick={() => handleThemeChange('dark')}
                 className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
                   theme === 'dark'
                     ? 'bg-[#0052FF] border-2 border-[#0052FF]'
@@ -107,8 +146,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <MessageSquare className="w-5 h-5 text-green-400" />
               <h3 className="text-white font-bold">Feedback</h3>
             </div>
-            <button className="w-full flex items-center justify-between p-4 bg-[#1A1F2E] border-2 border-[#0052FF]/20 hover:border-[#0052FF] rounded-xl transition-all">
-              <span className="text-gray-300 font-medium">Send Feedback</span>
+            <button 
+              onClick={handleFeedback}
+              className="w-full flex items-center justify-between p-4 bg-[#1A1F2E] border-2 border-[#0052FF]/20 hover:border-[#0052FF] rounded-xl transition-all group"
+            >
+              <span className="text-gray-300 group-hover:text-white font-medium">Send Feedback</span>
+              <span className="text-xs text-gray-500">→</span>
             </button>
           </div>
 
@@ -120,7 +163,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
             <div className="space-y-2">
               <button
-                onClick={() => setLanguage('en')}
+                onClick={() => handleLanguageChange('en')}
                 className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
                   language === 'en'
                     ? 'bg-[#0052FF] border-2 border-[#0052FF]'
@@ -141,7 +184,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </button>
 
               <button
-                onClick={() => setLanguage('tr')}
+                onClick={() => handleLanguageChange('tr')}
                 className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
                   language === 'tr'
                     ? 'bg-[#0052FF] border-2 border-[#0052FF]'
