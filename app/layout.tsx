@@ -4,6 +4,7 @@ import './globals.css';
 import { MiniAppProvider } from '@/components/miniapp-provider';
 import { FarcasterProvider } from '@/app/providers/farcaster-provider';
 import { MiniAppBootstrap } from '@/components/miniapp-bootstrap';
+import { OnchainProvider } from './providers/onchain-provider'; 
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -45,26 +46,24 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Static embed JSON - no JSON.stringify issues
   const embedJson = `{"version":"next","imageUrl":"${baseUrl}/embed-image.png","button":{"title":"Launch Base Box","action":{"type":"launch_frame","name":"Base Box","url":"${baseUrl}","splashImageUrl":"${baseUrl}/splash.png","splashBackgroundColor":"#000814"}}}`;
-
+  
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        {/* CRITICAL: fc:miniapp meta tag */}
         <meta name="fc:miniapp" content={embedJson} />
         <meta name="fc:frame" content={embedJson} />
       </head>
       <body className={inter.className}>
-        <MiniAppBootstrap />
-        <MiniAppProvider>
-          <FarcasterProvider>
-            {children}
-          </FarcasterProvider>
-        </MiniAppProvider>
+        <OnchainProvider>
+          <MiniAppBootstrap />
+          <MiniAppProvider>
+            <FarcasterProvider>
+              {children}
+            </FarcasterProvider>
+          </MiniAppProvider>
+        </OnchainProvider>
       </body>
     </html>
-    );
-
+  );
 }
-

@@ -1,9 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Lock, Unlock, Clock, Sparkles, TrendingUp, Zap, Gift, Rocket, Shield, Users, ArrowRight, Star, Trophy } from 'lucide-react';
+import { Lock, Unlock, Clock, Sparkles, TrendingUp, Zap, Gift, Rocket, Shield, Users, ArrowRight, Star, Trophy, Settings, Wallet } from 'lucide-react';
 import { useRipple, createSparkles, createConfetti } from '@/components/animations/effects';
 import BottomNav from '@/components/ui/bottom-nav';
+import Link from 'next/link';
+import { useFarcaster } from '@/hooks/use-farcaster';
+import { useWallet } from '@/hooks/usewallet';
+import { WalletModal } from '@/components/wallet/WalletModal';
+import { WalletDropdown } from '@/components/wallet/WalletDropdown';
+import { SettingsModal } from '@/components/settings/settingsmodal';
 
 interface Stats {
   totalCapsules: number;
@@ -15,6 +21,7 @@ export default function HomePage() {
   const fid = 3;
   const createRipple = useRipple();
   const heroRef = useRef<HTMLDivElement>(null);
+  const { address, isConnected } = useWallet();
   
   const [stats, setStats] = useState<Stats>({ 
     totalCapsules: 0, 
@@ -23,6 +30,9 @@ export default function HomePage() {
   });
   const [loading, setLoading] = useState(true);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showWalletDropdown, setShowWalletDropdown] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -71,7 +81,70 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#000814] pb-24 overflow-hidden">
+    <div className="min-h-screen bg-[#000814] pb-24 pt-16 overflow-hidden">
+      {/* Fixed Header with Wallet + Settings */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#000814]/80 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#0052FF] to-cyan-400 rounded-lg flex items-center justify-center">
+                <Lock className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-white font-bold text-lg">Base Box</span>
+            </Link>
+
+            {/* Right side - Wallet + Settings */}
+            <div className="flex items-center space-x-3">
+              {/* Wallet Button */}
+              {isConnected && address ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowWalletDropdown(!showWalletDropdown)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-[#0052FF]/20 hover:bg-[#0052FF]/30 border border-[#0052FF]/50 rounded-lg transition-all"
+                  >
+                    <Wallet className="w-4 h-4 text-[#0052FF]" />
+                    <span className="text-white text-sm font-medium">
+                      {address.slice(0, 6)}...{address.slice(-4)}
+                    </span>
+                  </button>
+                  
+                  {showWalletDropdown && (
+                    <>
+                      {/* Backdrop */}
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowWalletDropdown(false)}
+                      />
+                      {/* Dropdown */}
+                      <div className="absolute top-full right-0 mt-2 z-50">
+                        <WalletDropdown />
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowWalletModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-[#0052FF] hover:bg-[#0052FF]/90 rounded-lg transition-all"
+                >
+                  <Wallet className="w-4 h-4 text-white" />
+                  <span className="text-white text-sm font-medium">Connect</span>
+                </button>
+              )}
+
+              {/* Settings Icon */}
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <Settings className="w-5 h-5 text-white/60 hover:text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
       <div 
@@ -371,6 +444,17 @@ export default function HomePage() {
 
       {/* Bottom Navigation */}
       <BottomNav />
+
+      {/* Modals */}
+      <WalletModal 
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+      />
+
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
 
       {/* Floating Animation Styles */}
       <style jsx>{`
