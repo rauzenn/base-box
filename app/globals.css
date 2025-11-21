@@ -415,4 +415,93 @@ body {
   to {
     transform: rotate(360deg);
   }
+
+/* Light Theme Variables - Add to your existing globals.css */
+
+:root {
+  /* Dark Theme (Default) */
+  --bg-primary: #000814;
+  --bg-secondary: #001428;
+  --bg-card: #0A0E14;
+  --bg-hover: #1A1F2E;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --border-color: rgba(0, 82, 255, 0.3);
+  --accent-blue: #0052FF;
+  --accent-cyan: #06b6d4;
+}
+
+[data-theme='light'] {
+  /* Light Theme */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-card: #f3f4f6;
+  --bg-hover: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --border-color: rgba(0, 82, 255, 0.2);
+  --accent-blue: #0052FF;
+  --accent-cyan: #06b6d4;
+}
+
+/* Apply theme colors */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Update existing classes to use CSS variables */
+.bg-\[#000814\] {
+  background-color: var(--bg-primary) !important;
+}
+
+.bg-\[#001428\] {
+  background-color: var(--bg-secondary) !important;
+}
+
+.bg-\[#0A0E14\]\/60,
+.bg-\[#0A0E14\] {
+  background-color: var(--bg-card) !important;
+}
+
+.bg-\[#1A1F2E\] {
+  background-color: var(--bg-hover) !important;
+}
+
+.text-white {
+  color: var(--text-primary) !important;
+}
+
+.text-gray-400 {
+  color: var(--text-secondary) !important;
+}
+
+.text-gray-500 {
+  color: var(--text-muted) !important;
+}
+
+/* Light theme specific adjustments */
+[data-theme='light'] .border-\[#0052FF\]\/30,
+[data-theme='light'] .border-\[#0052FF\]\/20 {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='light'] .shadow-2xl,
+[data-theme='light'] .shadow-xl {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Gradient backgrounds - adjust for light mode */
+[data-theme='light'] .bg-gradient-to-b {
+  background: linear-gradient(to bottom, #ffffff, #f9fafb, #ffffff) !important;
+}
+
+/* Grid pattern - lighter in light mode */
+[data-theme='light'] .opacity-20 {
+  opacity: 0.05 !important;
+}
+
 }

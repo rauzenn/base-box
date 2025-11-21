@@ -5,6 +5,7 @@ import { MiniAppProvider } from '@/components/miniapp-provider';
 import { FarcasterProvider } from '@/app/providers/farcaster-provider';
 import { MiniAppBootstrap } from '@/components/miniapp-bootstrap';
 import { OnchainProvider } from './providers/onchain-provider'; 
+import { ThemeProvider } from '@/context/ThemeContext';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -55,14 +56,16 @@ export default function RootLayout({
         <meta name="fc:frame" content={embedJson} />
       </head>
       <body className={inter.className}>
-        <OnchainProvider>
-          <MiniAppBootstrap />
-          <MiniAppProvider>
-            <FarcasterProvider>
-              {children}
-            </FarcasterProvider>
-          </MiniAppProvider>
-        </OnchainProvider>
+        <ThemeProvider>
+          <OnchainProvider>
+            <MiniAppBootstrap />
+            <MiniAppProvider>
+              <FarcasterProvider>
+                {children}
+              </FarcasterProvider>
+            </MiniAppProvider>
+          </OnchainProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

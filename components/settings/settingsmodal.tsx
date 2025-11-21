@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, X, Sun, Moon, Globe, Info, MessageSquare } from 'lucide-react';
+import { Settings, X, Sun, Moon, Info, MessageSquare } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -9,41 +10,24 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [language, setLanguage] = useState<'en' | 'tr'>('en');
-
-  // Load saved settings on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('basebox_theme') as 'light' | 'dark' | null;
-    const savedLanguage = localStorage.getItem('basebox_language') as 'en' | 'tr' | null;
-    
-    if (savedTheme) setTheme(savedTheme);
-    if (savedLanguage) setLanguage(savedLanguage);
-  }, []);
+  const { theme, setTheme } = useTheme();
+  const [saved, setSaved] = useState<string | null>(null);
 
   // Handle theme change
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
-    localStorage.setItem('basebox_theme', newTheme);
     
-    // Apply theme to body
-    if (newTheme === 'light') {
-      document.body.classList.add('light-theme');
-      document.body.classList.remove('dark-theme');
-    } else {
-      document.body.classList.add('dark-theme');
-      document.body.classList.remove('light-theme');
-    }
+    // Show saved feedback
+    setSaved('Theme');
+    setTimeout(() => setSaved(null), 2000);
     
     console.log(`🎨 Theme changed to: ${newTheme}`);
   };
 
   // Handle language change
   const handleLanguageChange = (newLanguage: 'en' | 'tr') => {
-    setLanguage(newLanguage);
-    localStorage.setItem('basebox_language', newLanguage);
-    console.log(`🌐 Language changed to: ${newLanguage}`);
-    // TODO: Implement i18n translation system
+    // Language system removed - English only
+    console.log(`🌐 Language: English (${newLanguage} requested)`);
   };
 
   // Handle feedback
@@ -72,7 +56,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0052FF]/10 to-purple-500/10 border-b-2 border-gray-800 p-6">
-          <h2 className="text-2xl font-black text-white">Settings</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black text-white">Settings</h2>
+            {saved && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg animate-fade-in">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-xs font-bold text-green-400">{saved} Saved!</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Content */}
@@ -153,57 +145,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <span className="text-gray-300 group-hover:text-white font-medium">Send Feedback</span>
               <span className="text-xs text-gray-500">→</span>
             </button>
-          </div>
-
-          {/* Language Section */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Globe className="w-5 h-5 text-blue-400" />
-              <h3 className="text-white font-bold">Language</h3>
-            </div>
-            <div className="space-y-2">
-              <button
-                onClick={() => handleLanguageChange('en')}
-                className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
-                  language === 'en'
-                    ? 'bg-[#0052FF] border-2 border-[#0052FF]'
-                    : 'bg-[#1A1F2E] border-2 border-[#0052FF]/20 hover:border-[#0052FF]'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🇺🇸</span>
-                  <span className={`font-bold ${language === 'en' ? 'text-white' : 'text-gray-300'}`}>
-                    English
-                  </span>
-                </div>
-                {language === 'en' && (
-                  <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-[#0052FF] rounded-full" />
-                  </div>
-                )}
-              </button>
-
-              <button
-                onClick={() => handleLanguageChange('tr')}
-                className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
-                  language === 'tr'
-                    ? 'bg-[#0052FF] border-2 border-[#0052FF]'
-                    : 'bg-[#1A1F2E] border-2 border-[#0052FF]/20 hover:border-[#0052FF]'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🇹🇷</span>
-                  <span className={`font-bold ${language === 'tr' ? 'text-white' : 'text-gray-300'}`}>
-                    Türkçe
-                  </span>
-                </div>
-                {language === 'tr' && (
-                  <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-[#0052FF] rounded-full" />
-                  </div>
-                )}
-              </button>
-            </div>
           </div>
         </div>
       </div>
