@@ -26,22 +26,35 @@ export function useWallet() {
     try {
       setWallet(prev => ({ ...prev, isConnecting: true }));
 
+      console.log('🔵 [Wallet] Starting Farcaster wallet connection...');
+
+      // Wait for SDK to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Get Ethereum provider from Farcaster SDK
       const provider = sdk.wallet.ethProvider;
       
+      console.log('🔵 [Wallet] Provider status:', {
+        exists: !!provider,
+        type: typeof provider,
+        methods: provider ? Object.keys(provider) : []
+      });
+      
       if (!provider) {
-        throw new Error('Farcaster wallet provider not available');
+        throw new Error('Farcaster wallet provider not available. Make sure you are in a Farcaster client.');
       }
 
-      console.log('🔵 Starting Farcaster wallet connection...');
+      console.log('🔵 [Wallet] Requesting accounts...');
 
       // Request account access
       const accounts = await provider.request({
         method: 'eth_requestAccounts',
       });
 
+      console.log('🔵 [Wallet] Accounts:', accounts);
+
       const address = accounts[0];
-      console.log('✅ Account connected:', address);
+      console.log('✅ [Wallet] Account connected:', address);
 
       // Get balance
       const balanceHex = await provider.request({
@@ -49,7 +62,10 @@ export function useWallet() {
         params: [address, 'latest'],
       });
       
+      console.log('🔵 [Wallet] Balance (hex):', balanceHex);
+      
       const balanceInEth = formatEther(BigInt(balanceHex));
+      console.log('✅ [Wallet] Balance (ETH):', balanceInEth);
 
       setWallet({
         address,
@@ -59,9 +75,16 @@ export function useWallet() {
         provider,
       });
 
+      console.log('✅ [Wallet] Wallet state updated successfully');
+
       return address;
     } catch (error) {
-      console.error('❌ Farcaster wallet connection failed:', error);
+      console.error('❌ [Wallet] Farcaster wallet connection failed:', error);
+      console.error('❌ [Wallet] Error details:', {
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      });
       setWallet(prev => ({ ...prev, isConnecting: false }));
       throw error;
     }
@@ -72,18 +95,25 @@ export function useWallet() {
     try {
       setWallet(prev => ({ ...prev, isConnecting: true }));
 
+      console.log('🟢 [Wallet] Starting external wallet connection...');
+
       if (!window.ethereum) {
-        throw new Error('No external wallet found');
+        throw new Error('No external wallet found. Please install MetaMask or another Web3 wallet.');
       }
 
-      console.log('🟢 Starting external wallet connection...');
+      console.log('🟢 [Wallet] External wallet detected:', {
+        isMetaMask: window.ethereum.isMetaMask,
+        chainId: window.ethereum.chainId,
+      });
 
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });
 
+      console.log('🟢 [Wallet] Accounts:', accounts);
+
       const address = accounts[0];
-      console.log('✅ External wallet connected:', address);
+      console.log('✅ [Wallet] External wallet connected:', address);
 
       // Get balance
       const balanceHex = await window.ethereum.request({
@@ -91,7 +121,10 @@ export function useWallet() {
         params: [address, 'latest'],
       });
       
+      console.log('🟢 [Wallet] Balance (hex):', balanceHex);
+      
       const balanceInEth = formatEther(BigInt(balanceHex));
+      console.log('✅ [Wallet] Balance (ETH):', balanceInEth);
 
       setWallet({
         address,
@@ -101,9 +134,16 @@ export function useWallet() {
         provider: window.ethereum,
       });
 
+      console.log('✅ [Wallet] Wallet state updated successfully');
+
       return address;
     } catch (error) {
-      console.error('❌ External wallet connection failed:', error);
+      console.error('❌ [Wallet] External wallet connection failed:', error);
+      console.error('❌ [Wallet] Error details:', {
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      });
       setWallet(prev => ({ ...prev, isConnecting: false }));
       throw error;
     }
@@ -111,7 +151,7 @@ export function useWallet() {
 
   // Disconnect wallet
   const disconnect = useCallback(() => {
-    console.log('🔴 Disconnecting wallet...');
+    console.log('🔴 [Wallet] Disconnecting wallet...');
     setWallet({
       address: null,
       balance: null,
@@ -119,6 +159,8 @@ export function useWallet() {
       isConnecting: false,
       provider: null,
     });
+    localStorage.removeItem('lastWalletType');
+    console.log('✅ [Wallet] Disconnected successfully');
   }, []);
 
   // Auto-connect on mount (if previously connected)
@@ -126,9 +168,17 @@ export function useWallet() {
     const lastWalletType = localStorage.getItem('lastWalletType');
     
     if (lastWalletType === 'farcaster') {
-      connectFarcasterWallet().catch(console.error);
+      console.log('🔄 [Wallet] Auto-connecting Farcaster wallet...');
+      connectFarcasterWallet().catch(err => {
+        console.error('❌ [Wallet] Auto-connect failed:', err);
+        localStorage.removeItem('lastWalletType');
+      });
     } else if (lastWalletType === 'external') {
-      connectExternalWallet().catch(console.error);
+      console.log('🔄 [Wallet] Auto-connecting external wallet...');
+      connectExternalWallet().catch(err => {
+        console.error('❌ [Wallet] Auto-connect failed:', err);
+        localStorage.removeItem('lastWalletType');
+      });
     }
   }, [connectFarcasterWallet, connectExternalWallet]);
 

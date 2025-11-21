@@ -1,6 +1,7 @@
 'use client';
 
-import { Wallet, X } from 'lucide-react';
+import { useState } from 'react';
+import { Wallet, X, AlertCircle } from 'lucide-react';
 import { useWallet } from '@/hooks/usewallet';
 
 interface WalletModalProps {
@@ -10,24 +11,39 @@ interface WalletModalProps {
 
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const { connectFarcasterWallet, connectExternalWallet, isConnecting } = useWallet();
+  const [error, setError] = useState<string | null>(null);
 
   const handleFarcasterConnect = async () => {
     try {
+      setError(null);
+      console.log('👆 [Modal] User clicked Farcaster wallet');
+      
       await connectFarcasterWallet();
       localStorage.setItem('lastWalletType', 'farcaster');
+      
+      console.log('✅ [Modal] Farcaster wallet connected, closing modal');
       onClose();
     } catch (error) {
-      console.error('Failed to connect Farcaster wallet:', error);
+      const errorMessage = (error as Error).message || 'Failed to connect Farcaster wallet';
+      console.error('❌ [Modal] Farcaster connection failed:', errorMessage);
+      setError(errorMessage);
     }
   };
 
   const handleExternalConnect = async () => {
     try {
+      setError(null);
+      console.log('👆 [Modal] User clicked external wallet');
+      
       await connectExternalWallet();
       localStorage.setItem('lastWalletType', 'external');
+      
+      console.log('✅ [Modal] External wallet connected, closing modal');
       onClose();
     } catch (error) {
-      console.error('Failed to connect external wallet:', error);
+      const errorMessage = (error as Error).message || 'Failed to connect external wallet';
+      console.error('❌ [Modal] External connection failed:', errorMessage);
+      setError(errorMessage);
     }
   };
 
@@ -63,6 +79,23 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           Choose a wallet to connect and access Base Box
         </p>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl flex items-start gap-3 animate-fade-in">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-red-400 mb-1">Connection Failed</p>
+              <p className="text-xs text-red-300">{error}</p>
+            </div>
+            <button 
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Wallet Options */}
         <div className="space-y-4">
           {/* Farcaster Wallet */}
@@ -80,13 +113,21 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
               </svg>
             </div>
             <div className="flex-1 text-left">
-              <h3 className="text-lg font-black text-white">Farcaster</h3>
-              <p className="text-sm text-gray-400">Connect wallet</p>
+              <h3 className="text-lg font-black text-white">Farcaster Wallet</h3>
+              <p className="text-sm text-gray-400">
+                {isConnecting ? 'Connecting...' : 'Connect with Farcaster'}
+              </p>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-[#0052FF]/30 group-hover:border-[#0052FF] transition-colors" />
+            {isConnecting ? (
+              <div className="w-8 h-8">
+                <div className="w-full h-full border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full border-2 border-[#0052FF]/30 group-hover:border-[#0052FF] transition-colors" />
+            )}
           </button>
 
-          {/* External Wallet (BaseApp/MetaMask) */}
+          {/* External Wallet (MetaMask/BaseApp) */}
           <button
             onClick={handleExternalConnect}
             disabled={isConnecting}
@@ -96,10 +137,18 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
               <Wallet className="w-8 h-8 text-[#0052FF]" />
             </div>
             <div className="flex-1 text-left">
-              <h3 className="text-lg font-black text-white">BaseApp Wallet</h3>
-              <p className="text-sm text-gray-400">Connect wallet</p>
+              <h3 className="text-lg font-black text-white">External Wallet</h3>
+              <p className="text-sm text-gray-400">
+                {isConnecting ? 'Connecting...' : 'MetaMask, Coinbase, etc.'}
+              </p>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-[#0052FF]/30 group-hover:border-[#0052FF] transition-colors" />
+            {isConnecting ? (
+              <div className="w-8 h-8">
+                <div className="w-full h-full border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full border-2 border-[#0052FF]/30 group-hover:border-[#0052FF] transition-colors" />
+            )}
           </button>
         </div>
 
