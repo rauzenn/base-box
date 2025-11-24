@@ -10,6 +10,7 @@ import { useFarcaster } from '@/hooks/use-farcaster';
 import { useWallet } from '@/hooks/usewallet';
 import { WalletModal } from '@/components/wallet/WalletModal';
 import { WalletDropdown } from '@/components/wallet/WalletDropdown';
+import { SettingsModal } from '@/components/settings/settingsmodal';
 
 interface Stats {
   totalCapsules: number;
@@ -44,6 +45,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -187,7 +189,7 @@ if (!fid) {
       />
 
       <div className="relative z-10 p-6 fade-in-up">
-        {/* Header with Wallet Button */}
+        {/* Header with Wallet & Settings */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-4xl font-black text-white flex items-center gap-3">
@@ -195,82 +197,81 @@ if (!fid) {
               My Profile
             </h1>
 
-            {/* Wallet Button */}
-            {isConnected && address ? (
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Settings Button */}
               <button
-                onClick={() => setShowWalletModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-xl text-white font-bold transition-all shadow-lg hover:shadow-blue-500/50 scale-hover"
+                onClick={() => setShowSettingsModal(true)}
+                className="w-10 h-10 flex items-center justify-center bg-[#1A1F2E] hover:bg-[#0052FF]/20 border-2 border-[#0052FF]/20 hover:border-[#0052FF] rounded-xl transition-all"
               >
-                <WalletIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">{address.slice(0, 6)}...{address.slice(-4)}</span>
+                <Settings className="w-5 h-5 text-gray-400" />
               </button>
-            ) : (
-              <button
-                onClick={() => setShowWalletModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#0052FF] hover:bg-[#0052FF]/90 rounded-xl text-white font-bold transition-all shadow-lg"
-              >
-                <WalletIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Connect</span>
-              </button>
-            )}
+
+              {/* Wallet Button/Dropdown */}
+              {isConnected && address ? (
+                <WalletDropdown />
+              ) : (
+                <button
+                  onClick={() => setShowWalletModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0052FF] hover:bg-[#0052FF]/90 rounded-xl text-white font-bold transition-all shadow-lg scale-hover"
+                >
+                  <WalletIcon className="w-4 h-4" />
+                  <span>Connect Wallet</span>
+                </button>
+              )}
+            </div>
           </div>
           <p className="text-gray-400 font-medium">Your journey through time</p>
         </div>
 
         {/* Profile Card */}
-        <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-8 mb-6 card-hover">
-          <div className="flex items-center gap-6 mb-8">
+        <div className="slide-up bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/30 rounded-3xl p-8 mb-6 card-hover" style={{ animationDelay: '0.1s' }}>
+          <div className="flex flex-col items-center">
             {/* Avatar */}
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-xl shadow-blue-500/30 pulse">
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mb-4 shadow-2xl">
               <User className="w-12 h-12 text-white" />
             </div>
 
             {/* User Info */}
-            <div className="flex-1">
-              <h2 className="text-2xl font-black text-white mb-1">Time Traveler #{fid}</h2>
-              <p className="text-gray-400 font-medium mb-3">Base Box Pioneer</p>
-              
-              {/* Achievement Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-2 border-yellow-500/30 rounded-full">
+            <h2 className="text-3xl font-black text-white mb-2">
+              Time Traveler #{fid}
+            </h2>
+            <p className="text-gray-400 font-medium mb-6">Base Box Pioneer</p>
+
+            {/* Level Badge */}
+            <div className="px-6 py-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/30 rounded-full mb-6">
+              <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-yellow-500" />
-                <span className="text-yellow-500 font-bold text-sm">{levelInfo.level}</span>
+                <span className="font-black text-yellow-400">{levelInfo.level}</span>
               </div>
             </div>
-          </div>
 
-          {/* Achievement Progress */}
-          <div className="fade-in-up" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold text-gray-400">Achievement Level</span>
-              <span className="text-sm font-bold text-[#0052FF]">{levelInfo.next}</span>
+            {/* Progress Bar */}
+            <div className="w-full">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-gray-400">Achievement Level</span>
+                <span className="text-sm font-bold text-[#0052FF]">{levelInfo.next}</span>
+              </div>
+              <div className="w-full h-3 bg-[#1A1F2E] rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-1000"
+                  style={{ width: `${levelInfo.progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center mt-2">
+                {achievements.filter(a => a.unlocked).length} achievements unlocked
+              </p>
             </div>
-            <div className="w-full h-3 bg-[#1A1F2E] rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${levelInfo.progress}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 font-medium mt-2 text-center">
-              {Math.round(levelInfo.progress)}% Complete • {achievements.filter(a => a.unlocked).length}/{achievements.length} Unlocked
-            </p>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <StatCard
-            icon={Lock}
-            label="Total Capsules"
-            value={stats.totalCapsules}
-            color="blue"
-            delay={0.1}
-            createRipple={createRipple}
-          />
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <StatCard
             icon={Lock}
             label="Locked"
             value={lockedCapsules}
-            color="orange"
+            color="blue"
             delay={0.2}
             createRipple={createRipple}
           />
@@ -406,6 +407,12 @@ if (!fid) {
       <WalletModal 
         isOpen={showWalletModal}
         onClose={() => setShowWalletModal(false)}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
       />
 
       {/* Bottom Navigation */}
