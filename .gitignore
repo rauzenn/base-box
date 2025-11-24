@@ -14,3 +14,10 @@ next-env.d.ts
 
 # Test outputs
 test-output.*
+
+# Hardhat
+cache/
+artifacts/
+
+# Deployment
+deployment-info.json

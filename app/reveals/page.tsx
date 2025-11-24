@@ -7,8 +7,7 @@ import BottomNav from '@/components/ui/bottom-nav';
 import { useWallet } from '@/hooks/usewallet';
 import { WalletModal } from '@/components/wallet/WalletModal';
 import { SettingsModal } from '@/components/settings/settingsmodal';
-import { encodeFunctionData } from 'viem';
-import type { Address as AddressType } from 'viem';
+import { MintButton } from '@/components/nft/MintButton';
 
 interface Capsule {
   id: string;
@@ -21,27 +20,14 @@ interface Capsule {
   revealed: boolean;
 }
 
-// TEMPORARY: Example NFT contract on Base Sepolia
-const NFT_CONTRACT_ADDRESS = '0x119Ea671030FBf79AB93b436D2E20af6ea469a19' as AddressType;
-const NFT_CONTRACT_ABI = [
-  {
-    inputs: [{ name: 'to', type: 'address' }],
-    name: 'mint',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-] as const;
-
 export default function RevealsPage() {
   const fid = 3;
   const createRipple = useRipple();
-  const { address, isConnected, provider } = useWallet();
+  const { address, isConnected } = useWallet();
   
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCapsule, setSelectedCapsule] = useState<Capsule | null>(null);
-  const [mintingCapsuleId, setMintingCapsuleId] = useState<string | null>(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
@@ -94,47 +80,6 @@ export default function RevealsPage() {
     document.body.removeChild(link);
   };
 
-  const handleMintNFT = async (capsuleId: string) => {
-    if (!isConnected || !address || !provider) {
-      alert('Please connect your wallet first');
-      setIsWalletModalOpen(true);
-      return;
-    }
-
-    try {
-      setMintingCapsuleId(capsuleId);
-      console.log('🎨 Starting NFT mint...');
-
-      // Prepare transaction data
-      const data = encodeFunctionData({
-        abi: NFT_CONTRACT_ABI,
-        functionName: 'mint',
-        args: [address as AddressType],
-      });
-
-      // Send transaction
-      const txHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: address,
-          to: NFT_CONTRACT_ADDRESS,
-          data,
-        }],
-      });
-
-      console.log('🎉 NFT Minted! Transaction:', txHash);
-      alert(`NFT Minted Successfully!\n\nTX: ${txHash}`);
-      setMintingCapsuleId(null);
-
-      // TODO: Store NFT info in database
-      
-    } catch (error) {
-      console.error('❌ Mint failed:', error);
-      alert('Failed to mint NFT. Please try again.');
-      setMintingCapsuleId(null);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
@@ -150,49 +95,44 @@ export default function RevealsPage() {
             <p className="text-gray-400 font-bold">Loading revealed capsules...</p>
           </div>
         </div>
-        <BottomNav />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#000814] pb-24">
-      {/* Animated Background */}
+      {/* Animated Background Grid */}
       <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
-      <div 
-        className="fixed inset-0 opacity-20"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
-        }}
-      />
+      <div className="fixed inset-0 opacity-20" style={{
+        backgroundImage: `linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)`,
+        backgroundSize: '50px 50px'
+      }} />
 
       <div className="relative z-10 p-6 fade-in-up">
-        {/* Header with Wallet Connection */}
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-4xl font-black text-white flex items-center gap-3">
-                <Unlock className="w-8 h-8 text-green-400" />
-                Revealed Capsules
-              </h1>
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border-2 border-green-500/30 rounded-full">
-                <Sparkles className="w-4 h-4 text-green-400" />
-                <span className="text-green-400 font-bold text-sm">{capsules.length} revealed</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-xl shadow-green-500/20 pulse">
+                <Unlock className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-black bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent mb-1">
+                  Revealed
+                </h1>
+                <p className="text-gray-400 text-sm font-medium">
+                  {capsules.length} memories unlocked
+                </p>
               </div>
             </div>
 
-            {/* Right Side: Wallet + Settings */}
             <div className="flex items-center gap-3">
-              {/* Simple Wallet Status */}
-              {isConnected && address ? (
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-green-500/10 border-2 border-green-500/30 rounded-xl">
+              {/* Wallet Button */}
+              {isConnected ? (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500/20 to-blue-500/20 border-2 border-green-500/30 rounded-xl">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-green-400 font-bold text-sm">
-                    {address.slice(0, 6)}...{address.slice(-4)}
+                  <span className="text-sm text-white font-bold hidden sm:inline">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
                   </span>
                 </div>
               ) : (
@@ -237,12 +177,9 @@ export default function RevealsPage() {
                 key={capsule.id}
                 capsule={capsule}
                 index={index}
-                isConnected={isConnected}
-                isMinting={mintingCapsuleId === capsule.id}
                 getTimeSinceLocked={getTimeSinceLocked}
                 onImageClick={() => setSelectedCapsule(capsule)}
                 onDownload={downloadImage}
-                onMintNFT={handleMintNFT}
                 createRipple={createRipple}
               />
             ))}
@@ -276,26 +213,20 @@ export default function RevealsPage() {
   );
 }
 
-// Revealed Capsule Card Component with NFT Minting
+// Revealed Capsule Card Component
 function RevealedCapsuleCard({
   capsule,
   index,
-  isConnected,
-  isMinting,
   getTimeSinceLocked,
   onImageClick,
   onDownload,
-  onMintNFT,
   createRipple,
 }: {
   capsule: any;
   index: number;
-  isConnected: boolean;
-  isMinting: boolean;
   getTimeSinceLocked: (date: string) => string;
   onImageClick: () => void;
   onDownload: (image: string, id: string) => void;
-  onMintNFT: (capsuleId: string) => void;
   createRipple: any;
 }) {
   return (
@@ -390,34 +321,18 @@ function RevealedCapsuleCard({
           </div>
         </div>
 
-        {/* Action Buttons with NFT Minting */}
-        <div className="flex flex-col gap-3 pt-4 fade-in-up" style={{ animationDelay: capsule.image ? '0.2s' : '0.1s' }}>
-          {/* NFT Mint Button */}
-          {isConnected ? (
-            <button
-              onClick={() => onMintNFT(capsule.id)}
-              disabled={isMinting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl transition-all shadow-xl hover:shadow-purple-500/50 btn-lift relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isMinting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Minting...
-                </>
-              ) : (
-                <>
-                  ✨ Mint as NFT
-                </>
-              )}
-            </button>
-          ) : (
-            <div className="w-full px-4 py-4 bg-[#1A1F2E] border-2 border-purple-500/20 rounded-xl text-center">
-              <p className="text-gray-400 text-sm font-medium">
-                <WalletIcon className="inline w-4 h-4 mr-2" />
-                Connect wallet to mint NFT
-              </p>
-            </div>
-          )}
+        {/* NFT Minting + Action Buttons */}
+        <div className="space-y-4 pt-4 fade-in-up" style={{ animationDelay: capsule.image ? '0.2s' : '0.1s' }}>
+          {/* NFT Mint Component */}
+          <MintButton 
+            capsuleId={capsule.id}
+            capsuleData={{
+              message: capsule.message,
+              image: capsule.image,
+              unlockDate: capsule.unlockDate,
+              createdAt: capsule.createdAt,
+            }}
+          />
 
           {/* Original Action Buttons */}
           <div className="flex gap-3">
@@ -447,7 +362,7 @@ function RevealedCapsuleCard({
   );
 }
 
-// Full Image Modal Component (unchanged)
+// Full Image Modal Component
 function FullImageModal({
   capsule,
   onClose,
