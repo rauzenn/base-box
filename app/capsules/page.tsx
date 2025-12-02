@@ -20,28 +20,55 @@ interface Capsule {
 type FilterType = 'all' | 'locked' | 'revealed';
 
 export default function CapsulesPage() {
-  const { fid, isLoading } = useFarcaster();
+  const { fid, isLoading: farcasterLoading } = useFarcaster();
   const createRipple = useRipple();
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  // ✅ FIXED: FID dependency added + only fetch when FID is available
   useEffect(() => {
+    if (!fid) {
+      console.log('📦 [Capsules] Waiting for FID...');
+      return;
+    }
+    
+    console.log('📦 [Capsules] FID available:', fid);
     fetchCapsules();
-  }, []);
+  }, [fid]); // ← FID DEPENDENCY ADDED!
 
   const fetchCapsules = async () => {
+    if (!fid) {
+      console.error('📦 [Capsules] Cannot fetch without FID');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/capsules/list?fid=${fid}`);
+      console.log('📦 [Capsules] Fetching capsules for FID:', fid);
+      
+      const response = await fetch(`/api/capsules/list?fid=${fid}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store', // ✅ ADDED: Disable cache
+      });
+
+      console.log('📦 [Capsules] Response status:', response.status);
+      
       const data = await response.json();
+      console.log('📦 [Capsules] Response data:', data);
 
       if (data.success) {
-        console.log('📦 Fetched capsules:', data.capsules);
+        console.log('📦 [Capsules] Fetched', data.capsules.length, 'capsules');
         setCapsules(data.capsules);
+      } else {
+        console.error('📦 [Capsules] API error:', data.message);
       }
     } catch (error) {
-      console.error('Failed to fetch capsules:', error);
+      console.error('📦 [Capsules] Fetch failed:', error);
     } finally {
       setLoading(false);
     }
@@ -72,7 +99,8 @@ export default function CapsulesPage() {
     return capsule.revealed || new Date(capsule.unlockDate) <= new Date();
   };
 
-  if (loading) {
+  // ✅ IMPROVED: Combined loading state
+  if (farcasterLoading || (loading && !capsules.length)) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
         <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
@@ -84,7 +112,39 @@ export default function CapsulesPage() {
         <div className="relative z-10 flex items-center justify-center h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
-            <p className="text-gray-400 font-bold">Loading capsules...</p>
+            <p className="text-gray-400 font-bold">
+              {farcasterLoading ? 'Connecting...' : 'Loading capsules...'}
+            </p>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // ✅ ADDED: No FID error state
+  if (!fid) {
+    return (
+      <div className="min-h-screen bg-[#000814] pb-24">
+        <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
+        <div className="fixed inset-0 opacity-20" style={{
+          backgroundImage: `linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }} />
+        
+        <div className="relative z-10 flex items-center justify-center h-screen px-6">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <h2 className="text-2xl font-black text-white mb-2">Connection Error</h2>
+            <p className="text-gray-400 mb-6">Unable to connect. Please use from Warpcast.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition"
+            >
+              Retry
+            </button>
           </div>
         </div>
         <BottomNav />
@@ -107,89 +167,61 @@ export default function CapsulesPage() {
         }}
       />
 
-      <div className="relative z-10 p-6 fade-in-up">
+      <div className="relative z-10 p-6">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-4xl font-black text-white flex items-center gap-3">
-              <Lock className="w-8 h-8 text-[#0052FF]" />
-              My Capsules
-            </h1>
-            <div className="flex items-center gap-2 px-4 py-2 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-full">
-              <Calendar className="w-4 h-4 text-[#0052FF]" />
-              <span className="text-white font-bold text-sm">{capsules.length} total</span>
+        <div className="mb-8 fade-in-up">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 pulse">
+                <Lock className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-1">
+                  My Capsules
+                </h1>
+                <p className="text-gray-400 text-sm font-medium">
+                  Your locked messages & memories
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-xl">
+              <div className="w-8 h-8 bg-[#0052FF]/20 rounded-lg flex items-center justify-center">
+                <span className="text-[#0052FF] font-black text-lg">{capsules.length}</span>
+              </div>
+              <span className="text-gray-400 text-sm font-bold">total</span>
             </div>
           </div>
-          <p className="text-gray-400 font-medium">Your locked messages & memories</p>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-3 mb-8 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-2">
-          <Sparkles className="w-5 h-5 text-gray-500 ml-2" />
-          {(['all', 'locked', 'revealed'] as FilterType[]).map((type) => {
-            const count = type === 'all' 
-              ? capsules.length
-              : type === 'locked'
-              ? capsules.filter(c => !isUnlocked(c)).length
-              : capsules.filter(c => isUnlocked(c)).length;
+        <div className="mb-6 fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <div className="flex gap-3 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-2">
+            {(['all', 'locked', 'revealed'] as FilterType[]).map((f) => {
+              const counts = {
+                all: capsules.length,
+                locked: capsules.filter(c => !isUnlocked(c)).length,
+                revealed: capsules.filter(c => isUnlocked(c)).length
+              };
 
-// Loading state
-if (isLoading) {
-  return (
-    <div className="min-h-screen bg-[#000814] pb-24">
-      <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
-      <div className="fixed inset-0 opacity-20" style={{
-        backgroundImage: `linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)`,
-        backgroundSize: '50px 50px'
-      }} />
-      
-      <div className="relative z-10 flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
-          <p className="text-gray-400 font-bold">Loading...</p>
-        </div>
-      </div>
-      <BottomNav />
-    </div>
-  );
-}
-
-// No FID error state
-if (!fid) {
-  return (
-    <div className="min-h-screen bg-[#000814] pb-24">
-      <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
-      
-      <div className="relative z-10 flex items-center justify-center h-screen text-white">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Farcaster Required</h2>
-          <p className="text-gray-400">Please open this app in Farcaster</p>
-        </div>
-      </div>
-      <BottomNav />
-    </div>
-  );
-}
-
-            return (
-              <button
-                key={type}
-                onClick={(e) => {
-                  createRipple(e);
-                  setFilter(type);
-                }}
-                className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all relative overflow-hidden ${
-                  filter === type
-                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-xl shadow-blue-500/30'
-                    : 'text-gray-400 hover:text-white hover:bg-[#1A1F2E]'
-                }`}
-              >
-                {type === 'all' && `All (${count})`}
-                {type === 'locked' && `Locked (${count})`}
-                {type === 'revealed' && `Revealed (${count})`}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={f}
+                  onClick={(e) => {
+                    createRipple(e);
+                    setFilter(f);
+                  }}
+                  className={`flex-1 py-3 px-4 rounded-xl font-black text-sm transition-all capitalize relative overflow-hidden ${
+                    filter === f
+                      ? 'bg-[#0052FF] text-white shadow-lg shadow-[#0052FF]/50'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {f} ({counts[f]})
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Capsules Grid */}
@@ -200,226 +232,148 @@ if (!fid) {
             </div>
             <h3 className="text-2xl font-black text-white mb-2">No capsules found</h3>
             <p className="text-gray-400 mb-8">
-              {filter === 'all'
+              {filter === 'all' 
                 ? 'Create your first time capsule!'
-                : `No ${filter} capsules yet.`}
+                : `No ${filter} capsules yet`
+              }
             </p>
-            <a
-              href="/create"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-xl shadow-xl hover:shadow-blue-500/50 transition-all btn-lift"
+            <button
+              onClick={(e) => {
+                createRipple(e);
+                window.location.href = '/create';
+              }}
+              className="px-8 py-4 bg-gradient-to-r from-[#0052FF] to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-black rounded-2xl transition-all shadow-xl hover:shadow-[#0052FF]/50 scale-hover relative overflow-hidden"
             >
-              <Lock className="w-5 h-5" />
               Create Capsule
-            </a>
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCapsules.map((capsule, index) => (
-              <CapsuleCard
-                key={capsule.id}
-                capsule={capsule}
-                index={index}
-                isUnlocked={isUnlocked(capsule)}
-                getTimeRemaining={getTimeRemaining}
-                onImageClick={setSelectedImage}
-                createRipple={createRipple}
-              />
-            ))}
+          <div className="space-y-4">
+            {filteredCapsules.map((capsule, index) => {
+              const unlocked = isUnlocked(capsule);
+              
+              return (
+                <div
+                  key={capsule.id}
+                  className={`stagger-item bg-[#0A0E14]/60 backdrop-blur-md border-2 rounded-2xl overflow-hidden transition-all card-hover ${
+                    unlocked 
+                      ? 'border-green-500/30 shadow-green-500/5 hover:shadow-green-500/10'
+                      : 'border-[#0052FF]/20 shadow-[#0052FF]/5 hover:shadow-[#0052FF]/10'
+                  }`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  {/* Header */}
+                  <div className={`p-5 border-b-2 border-gray-800 ${
+                    unlocked 
+                      ? 'bg-gradient-to-r from-green-500/10 to-blue-500/10'
+                      : 'bg-gradient-to-r from-[#0052FF]/10 to-cyan-500/10'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center pulse ${
+                          unlocked ? 'bg-green-500/20' : 'bg-[#0052FF]/20'
+                        }`}>
+                          {unlocked ? (
+                            <Sparkles className="w-5 h-5 text-green-400" />
+                          ) : (
+                            <Lock className="w-5 h-5 text-[#0052FF]" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="text-white font-black text-sm">
+                            {unlocked ? 'Unlocked' : 'Locked'}
+                          </h3>
+                          <p className="text-xs text-gray-400 font-medium">
+                            {unlocked 
+                              ? getTimeRemaining(capsule.unlockDate)
+                              : new Date(capsule.createdAt).toLocaleDateString()
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1A1F2E] rounded-lg border-2 border-[#0052FF]/20">
+                        <Calendar className="w-3 h-3 text-[#0052FF]" />
+                        <span className="text-xs text-gray-400 font-bold">
+                          {new Date(capsule.unlockDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-5 space-y-4">
+                    {/* Image Thumbnail */}
+                    {capsule.image && (
+                      <div 
+                        onClick={() => setSelectedImage(capsule.image!)}
+                        className="relative w-full rounded-xl overflow-hidden bg-[#1A1F2E] border-2 border-cyan-500/30 cursor-pointer group"
+                      >
+                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                          <img
+                            src={capsule.image}
+                            alt="Capsule"
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ImageIcon className="w-8 h-8 text-white" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Message Preview */}
+                    <div className="bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-xl p-4">
+                      <p className="text-white font-medium line-clamp-3">
+                        {unlocked ? capsule.message : '🔒 Locked until unlock date'}
+                      </p>
+                    </div>
+
+                    {/* Time Remaining */}
+                    {!unlocked && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-[#0052FF]" />
+                        <span className="text-gray-400 font-bold">
+                          {getTimeRemaining(capsule.unlockDate)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* Image Modal */}
       {selectedImage && (
-        <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />
-      )}
-
-      {/* Bottom Navigation */}
-      <BottomNav />
-    </div>
-  );
-}
-
-// Capsule Card Component
-function CapsuleCard({
-  capsule,
-  index,
-  isUnlocked,
-  getTimeRemaining,
-  onImageClick,
-  createRipple,
-}: {
-  capsule: any;
-  index: number;
-  isUnlocked: boolean;
-  getTimeRemaining: (date: string) => string;
-  onImageClick: (image: string) => void;
-  createRipple: any;
-}) {
-  return (
-    <div
-      className={`stagger-item bg-[#0A0E14]/60 backdrop-blur-md border-2 rounded-2xl overflow-hidden transition-all card-hover ${
-        isUnlocked
-          ? 'border-green-500/30 shadow-xl shadow-green-500/10'
-          : 'border-[#0052FF]/20 hover:border-[#0052FF]/40'
-      }`}
-      style={{ animationDelay: `${index * 0.1}s` }}
-    >
-      {/* Image Thumbnail */}
-      {capsule.image && (
         <div
-          onClick={() => isUnlocked && onImageClick(capsule.image!)}
-          className="relative w-full overflow-hidden"
-          style={{ paddingBottom: '56.25%' }}
+          onClick={() => setSelectedImage(null)}
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
         >
-          {isUnlocked ? (
-            // UNLOCKED: Show actual image
-            <>
-              <div className="absolute inset-0 bg-[#1A1F2E] cursor-pointer group">
-                <img
-                  src={capsule.image}
-                  alt="Capsule memory"
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      <ImageIcon className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Photo Badge */}
-              <div className="absolute top-3 right-3 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg border border-cyan-500/30">
-                <div className="flex items-center gap-1.5 text-xs text-cyan-400 font-bold">
-                  <ImageIcon className="w-3.5 h-3.5" />
-                  Photo
-                </div>
-              </div>
-            </>
-          ) : (
-            // LOCKED: Show gradient background (NO IMAGE!)
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-blue-900 to-[#0A0E14] flex items-center justify-center">
-              {/* Animated background glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-blue-500/20 to-transparent animate-pulse" />
-              
-              {/* Lock icon and text */}
-              <div className="relative text-center z-10">
-                <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-white/20">
-                  <Lock className="w-10 h-10 text-white" />
-                </div>
-                <p className="text-white text-lg font-black">Locked</p>
-                <p className="text-white/60 text-sm font-medium mt-1">Image hidden until reveal</p>
-              </div>
-
-              {/* Photo Badge (locked version) */}
-              <div className="absolute top-3 right-3 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-lg border border-white/20">
-                <div className="flex items-center gap-1.5 text-xs text-white/60 font-bold">
-                  <ImageIcon className="w-3.5 h-3.5" />
-                  Photo
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={selectedImage}
+              alt="Full size"
+              className="w-full h-auto rounded-2xl"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 w-10 h-10 bg-[#1A1F2E] hover:bg-[#0052FF]/20 border-2 border-[#0052FF]/20 hover:border-[#0052FF] rounded-full flex items-center justify-center transition-all"
+            >
+              <span className="text-white text-2xl leading-none">×</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Card Content */}
-      <div className="p-5 space-y-4">
-        {/* Status Badge */}
-        <div className="flex items-center justify-between">
-          <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border-2 ${
-              isUnlocked
-                ? 'bg-green-500/10 text-green-400 border-green-500/30'
-                : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-            }`}
-          >
-            {isUnlocked ? (
-              <>
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                Unlocked
-              </>
-            ) : (
-              <>
-                <Lock className="w-3.5 h-3.5" />
-                Locked
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Message Preview */}
-        <div>
-          <p className="text-white font-medium line-clamp-3 leading-relaxed">
-            {isUnlocked ? capsule.message : '🔒 Message locked until unlock date'}
-          </p>
-        </div>
-
-        {/* Time Info */}
-        <div className="pt-3 border-t-2 border-gray-800 space-y-2">
-          {!isUnlocked && (
-            <div className="flex items-center gap-2 text-sm text-[#0052FF] font-bold">
-              <Clock className="w-4 h-4" />
-              <span>{getTimeRemaining(capsule.unlockDate)}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>
-              {isUnlocked ? 'Unlocked' : 'Unlocks'} on{' '}
-              {new Date(capsule.unlockDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        {isUnlocked && (
-          <a
-            href="/reveals"
-            onClick={(e) => createRipple(e)}
-            className="block w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-bold rounded-xl transition-all text-center btn-lift relative overflow-hidden"
-          >
-            View Full Message
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Image Modal Component
-function ImageModal({ image, onClose }: { image: string; onClose: () => void }) {
-  return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in"
-    >
-      <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute -top-12 right-0 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-        >
-          <span className="text-white text-2xl">×</span>
-        </button>
-
-        {/* Image */}
-        <div className="relative w-full rounded-2xl overflow-hidden bg-[#1A1F2E] border-2 border-[#0052FF]/30">
-          <img
-            src={image}
-            alt="Capsule memory full view"
-            className="w-full h-auto object-contain max-h-[85vh]"
-          />
-        </div>
-      </div>
+      <BottomNav />
     </div>
   );
 }

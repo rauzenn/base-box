@@ -5,6 +5,21 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const revalidate = 0;
 
+// CORS headers for Farcaster iframe
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Cache-Control': 'no-store, no-cache, must-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+};
+
+// Handle OPTIONS request (CORS preflight)
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function GET(request: Request) {
   const startTime = Date.now();
   
@@ -22,7 +37,7 @@ export async function GET(request: Request) {
       console.error('❌ [List API] Missing FID parameter');
       return NextResponse.json(
         { success: false, message: 'FID required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -37,10 +52,10 @@ export async function GET(request: Request) {
     if (!capsuleIds || capsuleIds.length === 0) {
       console.log('📋 [List API] No capsules found - returning empty array');
       console.log('📋 [List API] Request completed in', Date.now() - startTime, 'ms');
-      return NextResponse.json({
-        success: true,
-        capsules: []
-      });
+      return NextResponse.json(
+        { success: true, capsules: [] },
+        { headers: corsHeaders }
+      );
     }
 
     // Step 2: Log all IDs
@@ -88,17 +103,8 @@ export async function GET(request: Request) {
     console.log('═══════════════════════════════════════');
 
     return NextResponse.json(
-      {
-        success: true,
-        capsules: validCapsules
-      },
-      {
-        headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-        }
-      }
+      { success: true, capsules: validCapsules },
+      { headers: corsHeaders }
     );
 
   } catch (error: any) {
@@ -113,7 +119,7 @@ export async function GET(request: Request) {
         message: 'Failed to list capsules',
         error: process.env.NODE_ENV === 'development' ? error.toString() : undefined
       },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
