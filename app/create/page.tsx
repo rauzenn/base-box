@@ -28,6 +28,7 @@ export default function CreatePage() {
   const [selectedDuration, setSelectedDuration] = useState(durations[2]);
   const [image, setImage] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -65,13 +66,16 @@ export default function CreatePage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      // ✅ alert() yerine state kullanıyoruz
+      setErrorMessage('Image must be less than 5MB');
+      setTimeout(() => setErrorMessage(null), 3000);
       return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
       setImage(reader.result as string);
+      setErrorMessage(null); // Clear any previous errors
     };
     reader.readAsDataURL(file);
   };
@@ -87,23 +91,38 @@ export default function CreatePage() {
     if (!message.trim()) return;
 
     setCreating(true);
+    setErrorMessage(null); // Clear previous errors
+    
     try {
-      const unlockDate = new Date(Date.now() + selectedDuration.days * 24 * 60 * 60 * 1000);
+      console.log('🎨 [Create] Starting capsule creation...');
+      console.log('🎨 [Create] FID:', fid);
+      console.log('🎨 [Create] Duration:', selectedDuration.days, 'days');
 
+      // ✅ FIXED: duration parametresini ekliyoruz
       const response = await fetch('/api/capsules/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fid,
           message: message.trim(),
-          unlockDate: unlockDate.toISOString(),
+          duration: selectedDuration.days, // ✅ EKLENDI!
           image,
+          imageType: image ? 'image/jpeg' : undefined, // ✅ EKLENDI!
         }),
       });
 
+      console.log('🎨 [Create] Response status:', response.status);
+      
       const data = await response.json();
+      console.log('🎨 [Create] Response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create capsule');
+      }
 
       if (data.success) {
+        console.log('✅ [Create] Capsule created successfully!');
+        
         // Check achievements
         await checkAchievements();
 
@@ -112,11 +131,12 @@ export default function CreatePage() {
           router.push('/capsules');
         }, 1000);
       } else {
-        throw new Error(data.error || 'Failed to create capsule');
+        throw new Error(data.message || 'Failed to create capsule');
       }
-    } catch (error) {
-      console.error('Error creating capsule:', error);
-      alert('❌ Failed to create capsule. Please try again.');
+    } catch (error: any) {
+      console.error('❌ [Create] Error:', error);
+      // ✅ alert() yerine state kullanıyoruz
+      setErrorMessage(error.message || 'Failed to create capsule. Please try again.');
     } finally {
       setCreating(false);
     }
@@ -138,6 +158,28 @@ export default function CreatePage() {
 
       <AchievementToast achievement={newAchievement} onClose={clearAchievement} />
 
+      {/* ✅ Error Toast (alert() yerine) */}
+      {errorMessage && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
+          <div className="bg-red-500/90 backdrop-blur-md border-2 border-red-400 rounded-xl px-6 py-4 shadow-xl max-w-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-400/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <X className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-bold text-sm">{errorMessage}</p>
+              </div>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="text-white/80 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="relative z-10 p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-black text-white mb-2 fade-in-up">Create Capsule</h1>
@@ -149,181 +191,208 @@ export default function CreatePage() {
         <div className="mb-8 fade-in-up" style={{ animationDelay: '0.2s' }}>
           <div className="h-2 bg-[#0A0E14]/60 backdrop-blur-md rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
+              className="h-full bg-gradient-to-r from-[#0052FF] to-cyan-500 transition-all duration-300"
               style={{ width: `${(step / 3) * 100}%` }}
             />
           </div>
         </div>
 
+        {/* Step 1: Message */}
         {step === 1 && (
-          <div className="space-y-6 fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <div>
-              <label className="flex items-center gap-2 text-white font-bold mb-3">
-                <Sparkles className="w-5 h-5 text-blue-500" />
-                Your Message
-              </label>
+          <div className="space-y-6 fade-in-up">
+            <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-[#0052FF]/20 rounded-full flex items-center justify-center">
+                  <Lock className="w-6 h-6 text-[#0052FF]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white">Your Message</h2>
+                  <p className="text-sm text-gray-400">What do you want to remember?</p>
+                </div>
+              </div>
+
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Write a message to your future self..."
-                className="w-full h-64 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-blue-500/30 rounded-2xl p-4 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none resize-none transition-all"
+                placeholder="Write your message here..."
                 maxLength={1000}
+                className="w-full h-40 bg-[#1A1F2E] border-2 border-[#0052FF]/20 focus:border-[#0052FF] rounded-xl p-4 text-white placeholder-gray-500 resize-none transition-all outline-none"
               />
-              <div className="flex justify-between items-center mt-2">
-                <p className="text-gray-500 text-sm">{message.length} / 1000 characters</p>
-                {message.length > 900 && (
-                  <p className="text-sm font-medium text-orange-500">{1000 - message.length} left</p>
-                )}
+              
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-sm text-gray-500">
+                  {message.length} / 1000 characters
+                </p>
               </div>
             </div>
 
-            <div>
-              <label className="flex items-center gap-2 text-white font-bold mb-3">
-                <ImageIcon className="w-5 h-5 text-cyan-500" />
-                Add Image (Optional)
-              </label>
-              
+            {/* Image Upload */}
+            <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                  <ImageIcon className="w-6 h-6 text-cyan-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white">Add Image (Optional)</h2>
+                  <p className="text-sm text-gray-400">Max 5MB</p>
+                </div>
+              </div>
+
               {!image ? (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-6 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-dashed border-blue-500/30 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center gap-3"
-                >
-                  <ImageIcon className="w-8 h-8 text-gray-400" />
-                  <span className="text-gray-400 font-medium">Click to upload image</span>
-                  <span className="text-gray-500 text-sm">Max 5MB</span>
-                </button>
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-4 border-2 border-dashed border-[#0052FF]/30 hover:border-[#0052FF] rounded-xl text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                    <span className="font-bold">Choose Image</span>
+                  </button>
+                </div>
               ) : (
                 <div className="relative">
-                  <div className="relative w-full rounded-2xl overflow-hidden" style={{ paddingBottom: '56.25%' }}>
-                    <img 
-                      src={image} 
-                      alt="Preview"
-                      className="absolute inset-0 w-full h-full object-contain bg-[#0A0E14]/60"
-                    />
+                  <div className="relative w-full rounded-xl overflow-hidden bg-[#1A1F2E]">
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <img
+                        src={image}
+                        alt="Preview"
+                        className="absolute inset-0 w-full h-full object-contain"
+                      />
+                    </div>
                   </div>
                   <button
                     onClick={removeImage}
-                    className="absolute top-2 right-2 w-10 h-10 bg-red-500/90 hover:bg-red-500 rounded-full flex items-center justify-center transition-all"
+                    className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-all"
                   >
-                    <X className="w-5 h-5 text-white" />
+                    <X className="w-4 h-4 text-white" />
                   </button>
                 </div>
               )}
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
             </div>
 
             <button
               onClick={() => setStep(2)}
               disabled={!message.trim()}
-              className="w-full py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-lift flex items-center justify-center gap-2 relative overflow-hidden"
+              className="w-full py-4 bg-gradient-to-r from-[#0052FF] to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-600 disabled:to-gray-700 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
             >
-              Next Step
+              <span>Next Step</span>
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         )}
 
+        {/* Step 2: Duration */}
         {step === 2 && (
-          <div className="space-y-6 fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <div>
-              <label className="flex items-center gap-2 text-white font-bold mb-4">
-                <Clock className="w-5 h-5 text-purple-500" />
-                Lock Duration
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                {durations.map((duration) => (
+          <div className="space-y-6 fade-in-up">
+            <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-[#0052FF]/20 rounded-full flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-[#0052FF]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white">Lock Duration</h2>
+                  <p className="text-sm text-gray-400">How long should it be locked?</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {durations.map((duration, index) => (
                   <button
-                    key={duration.days}
+                    key={index}
                     onClick={() => setSelectedDuration(duration)}
-                    className={`relative overflow-hidden p-6 rounded-2xl border-2 transition-all card-hover ${
+                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
                       selectedDuration.days === duration.days
-                        ? 'border-blue-500 bg-blue-500/20 scale-105'
-                        : 'border-white/10 bg-[#0A0E14]/60 hover:border-blue-500/50'
+                        ? 'border-[#0052FF] bg-[#0052FF]/10'
+                        : 'border-[#0052FF]/20 hover:border-[#0052FF]/50 bg-[#1A1F2E]'
                     }`}
                   >
-                    <div className="text-4xl mb-2">{duration.emoji}</div>
-                    <div className="text-white font-bold">{duration.label.split(' ').slice(1).join(' ')}</div>
-                    {duration.badge && (
-                      <span className="absolute top-2 right-2 px-2 py-1 bg-yellow-500/20 text-yellow-500 text-xs font-bold rounded-full">
-                        {duration.badge}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{duration.emoji}</span>
+                      <span className="text-white font-bold">{duration.label}</span>
+                    </div>
                     {selectedDuration.days === duration.days && (
-                      <Check className="absolute top-2 left-2 w-5 h-5 text-blue-500" />
+                      <Check className="w-5 h-5 text-[#0052FF]" />
                     )}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 py-4 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-white/10 rounded-2xl font-bold text-white hover:border-white/30 transition-all btn-lift flex items-center justify-center gap-2 relative overflow-hidden"
+                className="flex-1 py-4 bg-[#1A1F2E] hover:bg-[#0052FF]/20 border-2 border-[#0052FF]/20 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="w-5 h-5" />
-                Back
+                <span>Back</span>
               </button>
               <button
                 onClick={() => setStep(3)}
-                className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all btn-lift flex items-center justify-center gap-2 relative overflow-hidden"
+                className="flex-1 py-4 bg-gradient-to-r from-[#0052FF] to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2"
               >
-                Next Step
+                <span>Review</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
             </div>
           </div>
         )}
 
+        {/* Step 3: Confirm */}
         {step === 3 && (
-          <div className="space-y-6 fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-blue-500/30 rounded-2xl p-6">
-              <h3 className="flex items-center gap-2 text-white font-bold mb-4">
-                <Check className="w-5 h-5 text-green-500" />
-                Review Your Capsule
-              </h3>
-              
-              <div className="space-y-4">
+          <div className="space-y-6 fade-in-up">
+            <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-green-500/30 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Check className="w-6 h-6 text-green-500" />
+                </div>
                 <div>
-                  <p className="text-gray-400 text-sm mb-2">Message</p>
-                  <p className="text-white whitespace-pre-wrap">{message}</p>
+                  <h2 className="text-xl font-black text-white">Review Your Capsule</h2>
+                  <p className="text-sm text-gray-400">Everything looks good?</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-[#1A1F2E] rounded-xl p-4">
+                  <p className="text-sm text-gray-400 mb-2">Message</p>
+                  <p className="text-white font-medium">{message}</p>
                 </div>
 
                 {image && (
-                  <div>
-                    <p className="text-gray-400 text-sm mb-2">Image</p>
-                    <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: '56.25%' }}>
-                      <img 
-                        src={image} 
-                        alt="Preview"
-                        className="absolute inset-0 w-full h-full object-contain bg-[#0A0E14]"
-                      />
+                  <div className="bg-[#1A1F2E] rounded-xl p-4">
+                    <p className="text-sm text-gray-400 mb-3">Image</p>
+                    <div className="relative w-full rounded-lg overflow-hidden">
+                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <img
+                          src={image}
+                          alt="Preview"
+                          className="absolute inset-0 w-full h-full object-contain"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <div>
-                  <p className="text-gray-400 text-sm mb-2">Duration</p>
-                  <p className="flex items-center gap-2 text-white">
+                <div className="bg-[#1A1F2E] rounded-xl p-4">
+                  <p className="text-sm text-gray-400 mb-2">Duration</p>
+                  <div className="flex items-center gap-2">
                     <span className="text-2xl">{selectedDuration.emoji}</span>
-                    <span className="font-bold">{selectedDuration.label}</span>
-                  </p>
+                    <span className="text-white font-bold">{selectedDuration.label}</span>
+                  </div>
                 </div>
 
-                <div>
-                  <p className="text-gray-400 text-sm mb-2">Unlock Date</p>
-                  <p className="text-white font-medium">
+                <div className="bg-[#1A1F2E] rounded-xl p-4">
+                  <p className="text-sm text-gray-400 mb-2">Unlock Date</p>
+                  <p className="text-white font-bold">
                     {new Date(Date.now() + selectedDuration.days * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-                      year: 'numeric',
                       month: 'long',
                       day: 'numeric',
+                      year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
@@ -332,29 +401,29 @@ export default function CreatePage() {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setStep(2)}
                 disabled={creating}
-                className="flex-1 py-4 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-white/10 rounded-2xl font-bold text-white hover:border-white/30 transition-all disabled:opacity-50 btn-lift flex items-center justify-center gap-2 relative overflow-hidden"
+                className="flex-1 py-4 bg-[#1A1F2E] hover:bg-[#0052FF]/20 border-2 border-[#0052FF]/20 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <ArrowLeft className="w-5 h-5" />
-                Back
+                <span>Back</span>
               </button>
               <button
                 onClick={handleCreateCapsule}
                 disabled={creating}
-                className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl font-bold text-white shadow-xl hover:shadow-blue-500/50 transition-all disabled:opacity-50 btn-lift flex items-center justify-center gap-2 relative overflow-hidden"
+                className="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:from-gray-600 disabled:to-gray-700 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
               >
                 {creating ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Creating...
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Creating...</span>
                   </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    Lock Capsule
+                    <span>Lock Capsule</span>
                   </>
                 )}
               </button>
