@@ -1,61 +1,80 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 
-// CRITICAL: Mark as dynamic
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const revalidate = 0;
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  
   try {
     const { searchParams } = new URL(request.url);
     const fid = searchParams.get('fid');
 
-    console.log('📋 [List API] Request received, FID:', fid);
+    console.log('═══════════════════════════════════════');
+    console.log('📋 [List API] Request received');
+    console.log('📋 [List API] FID:', fid);
+    console.log('📋 [List API] Time:', new Date().toISOString());
+    console.log('═══════════════════════════════════════');
 
     if (!fid) {
-      console.error('❌ [List API] Missing FID');
+      console.error('❌ [List API] Missing FID parameter');
       return NextResponse.json(
         { success: false, message: 'FID required' },
         { status: 400 }
       );
     }
 
-    // ✅ FIXED: Get capsule IDs from user's set
-    const capsuleIds = await kv.smembers(`user:${fid}:capsules`);
-    console.log('📋 [List API] Found capsule IDs:', capsuleIds?.length || 0, 'capsules');
+    // Step 1: Get capsule IDs from user's set
+    const userSetKey = `user:${fid}:capsules`;
+    console.log('📋 [List API] Fetching from:', userSetKey);
+    
+    const capsuleIds = await kv.smembers(userSetKey);
+    console.log('📋 [List API] Raw response:', capsuleIds);
+    console.log('📋 [List API] Found', capsuleIds?.length || 0, 'capsule IDs');
 
     if (!capsuleIds || capsuleIds.length === 0) {
-      console.log('📋 [List API] No capsules for user');
+      console.log('📋 [List API] No capsules found - returning empty array');
+      console.log('📋 [List API] Request completed in', Date.now() - startTime, 'ms');
       return NextResponse.json({
         success: true,
         capsules: []
       });
     }
 
-    console.log('📋 [List API] Capsule IDs:', capsuleIds);
+    // Step 2: Log all IDs
+    console.log('📋 [List API] Capsule IDs to fetch:');
+    capsuleIds.forEach((id, index) => {
+      console.log(`   ${index + 1}. ${id}`);
+    });
 
-    // ✅ FIXED: Get capsules using correct key format
-    const capsules = await Promise.all(
-      capsuleIds.map(async (capsuleId) => {
-        try {
-          // Key format: capsule:569760-1733155200000
-          const capsule = await kv.get(`capsule:${capsuleId}`);
-          
-          if (!capsule) {
-            console.warn('⚠️ [List API] Capsule not found:', capsuleId);
-            return null;
-          }
-          
-          console.log('✅ [List API] Loaded capsule:', capsuleId);
-          return capsule;
-        } catch (error) {
-          console.error('❌ [List API] Error loading capsule:', capsuleId, error);
+    // Step 3: Fetch all capsules
+    console.log('📋 [List API] Fetching capsule data...');
+    const capsulePromises = capsuleIds.map(async (capsuleId) => {
+      try {
+        const key = `capsule:${capsuleId}`;
+        console.log('   Fetching:', key);
+        
+        const capsule = await kv.get(key);
+        
+        if (!capsule) {
+          console.warn('   ⚠️ Not found:', key);
           return null;
         }
-      })
-    );
+        
+        console.log('   ✅ Loaded:', key);
+        return capsule;
+      } catch (error) {
+        console.error('   ❌ Error loading:', capsuleId, error);
+        return null;
+      }
+    });
 
-    // Filter out nulls and sort by createdAt
+    const capsules = await Promise.all(capsulePromises);
+    console.log('📋 [List API] Loaded', capsules.filter(c => c !== null).length, 'capsules');
+
+    // Step 4: Filter nulls and sort
     const validCapsules = capsules
       .filter(c => c !== null)
       .sort((a: any, b: any) => {
@@ -64,17 +83,36 @@ export async function GET(request: Request) {
         return dateB - dateA; // Newest first
       });
 
-    console.log('✅ [List API] Returning', validCapsules.length, 'capsules');
+    console.log('📋 [List API] Valid capsules:', validCapsules.length);
+    console.log('📋 [List API] Request completed in', Date.now() - startTime, 'ms');
+    console.log('═══════════════════════════════════════');
 
-    return NextResponse.json({
-      success: true,
-      capsules: validCapsules
-    });
-
-  } catch (error) {
-    console.error('❌ [List API] Error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to list capsules' },
+      {
+        success: true,
+        capsules: validCapsules
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      }
+    );
+
+  } catch (error: any) {
+    console.error('═══════════════════════════════════════');
+    console.error('❌ [List API] Fatal error:', error);
+    console.error('❌ [List API] Stack:', error.stack);
+    console.error('═══════════════════════════════════════');
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Failed to list capsules',
+        error: process.env.NODE_ENV === 'development' ? error.toString() : undefined
+      },
       { status: 500 }
     );
   }
