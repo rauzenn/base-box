@@ -17,7 +17,7 @@ interface Capsule {
   revealed: boolean;
 }
 
-type FilterType = 'all' | 'locked' | 'revealed';
+type FilterType = 'all' | 'locked';
 
 export default function CapsulesPage() {
   const { fid, isLoading: farcasterLoading } = useFarcaster();
@@ -77,7 +77,6 @@ export default function CapsulesPage() {
   const filteredCapsules = capsules.filter((capsule) => {
     if (filter === 'all') return true;
     if (filter === 'locked') return !capsule.revealed && new Date(capsule.unlockDate) > new Date();
-    if (filter === 'revealed') return capsule.revealed || new Date(capsule.unlockDate) <= new Date();
     return true;
   });
 
@@ -197,11 +196,10 @@ export default function CapsulesPage() {
         {/* Filter Tabs */}
         <div className="mb-6 fade-in-up" style={{ animationDelay: '0.1s' }}>
           <div className="flex gap-3 bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-2">
-            {(['all', 'locked', 'revealed'] as FilterType[]).map((f) => {
+            {(['all', 'locked'] as FilterType[]).map((f) => {
               const counts = {
                 all: capsules.length,
                 locked: capsules.filter(c => !isUnlocked(c)).length,
-                revealed: capsules.filter(c => isUnlocked(c)).length
               };
 
               return (
