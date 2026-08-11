@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { MiniAppProvider } from '@/components/miniapp-provider';
 import { FarcasterProvider } from '@/app/providers/farcaster-provider';
-import { MiniAppBootstrap } from '@/components/miniapp-bootstrap';
 import { OnchainProvider } from './providers/onchain-provider'; 
 import { ThemeProvider } from '@/context/ThemeContext';
 
@@ -64,12 +62,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <OnchainProvider>
-            <MiniAppBootstrap />
-            <MiniAppProvider>
-              <FarcasterProvider>
-                {children}
-              </FarcasterProvider>
-            </MiniAppProvider>
+            <FarcasterProvider>
+              {children}
+            </FarcasterProvider>
           </OnchainProvider>
         </ThemeProvider>
       </body>
