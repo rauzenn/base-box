@@ -65,7 +65,7 @@ export function WalletDropdown() {
               <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-full" />
               <div className="flex-1">
                 <h3 className="text-white font-black text-lg">Wallet Connected</h3>
-                <p className="text-sm text-gray-400">Connected with Farcaster wallet</p>
+                <p className="text-sm text-gray-400">Connected to Base</p>
               </div>
             </div>
 
