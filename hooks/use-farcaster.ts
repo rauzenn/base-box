@@ -12,9 +12,27 @@ interface FarcasterContext {
   };
 }
 
+const LOCAL_ID_KEY = 'baseBoxLocalId';
+const CONTEXT_TIMEOUT_MS = 1500;
+
+// Base App / Warpcast dışında (normal tarayıcıda) sdk.context hiç cevap
+// vermeyebilir. Bu durumda kullanıcıya kalıcı bir yerel kimlik atıyoruz,
+// böylece uygulama Farcaster olmadan da normal şekilde çalışabiliyor.
+function getOrCreateLocalId(): number {
+  if (typeof window === 'undefined') return 0;
+  const stored = window.localStorage.getItem(LOCAL_ID_KEY);
+  if (stored) return parseInt(stored, 10);
+  const id = 1000000 + Math.floor(Math.random() * 8999999);
+  window.localStorage.setItem(LOCAL_ID_KEY, String(id));
+  return id;
+}
+
 /**
- * Custom hook to get Farcaster user context
- * Returns real FID and user information from the SDK
+ * Custom hook to get Farcaster user context.
+ * Base App / Warpcast içinde açılırsa gerçek fid ve kullanıcı bilgisini döner.
+ * Normal tarayıcıda açılırsa (Farcaster context gelmezse) 1.5 saniye içinde
+ * yerel bir kimliğe düşer, böylece uygulama hiçbir zaman sonsuz "loading"
+ * durumunda kalmaz.
  */
 export function useFarcaster() {
   const [context, setContext] = useState<FarcasterContext | null>(null);
@@ -22,24 +40,40 @@ export function useFarcaster() {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadContext = async () => {
       try {
-        console.log('🔄 Loading Farcaster context...');
-        
-        // Get context from SDK
-        const ctx = await sdk.context;
-        console.log('✅ Context loaded:', ctx);
-        
-        setContext(ctx);
-        setIsLoading(false);
+        const ctx = await Promise.race([
+          sdk.context,
+          new Promise<any>((resolve) =>
+            setTimeout(() => resolve(null), CONTEXT_TIMEOUT_MS)
+          ),
+        ]);
+
+        if (cancelled) return;
+
+        if (ctx?.user?.fid) {
+          console.log('✅ Farcaster context loaded:', ctx);
+          setContext(ctx);
+        } else {
+          console.log('ℹ️ Farcaster context yok, yerel kimlik kullanılıyor');
+          setContext({ user: { fid: getOrCreateLocalId() } });
+        }
       } catch (err) {
-        console.error('❌ Failed to load Farcaster context:', err);
+        if (cancelled) return;
+        console.log('ℹ️ Farcaster context alınamadı, yerel kimlik kullanılıyor');
         setError(err as Error);
-        setIsLoading(false);
+        setContext({ user: { fid: getOrCreateLocalId() } });
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadContext();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return {
@@ -48,12 +82,14 @@ export function useFarcaster() {
     username: context?.user?.username || null,
     displayName: context?.user?.displayName || null,
     pfpUrl: context?.user?.pfpUrl || null,
-    
+
     // Full context
     context,
-    
+
     // States
     isLoading,
     error,
   };
 }
+
+export default useFarcaster;
