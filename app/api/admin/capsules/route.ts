@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
+import { isValidAdminRequest } from '@/lib/admin-auth';
 
 // CRITICAL: Mark as dynamic to use request.headers
 export const dynamic = 'force-dynamic';
@@ -7,11 +8,10 @@ export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    // Simple token validation
-    if (!token || token.length < 10) {
+    // Token'ın gerçekten admin login'den geldiğini KV üzerinden doğruluyoruz.
+    // Eskiden sadece "token 10+ karakter mi" bakılıyordu, bu da uydurma
+    // herhangi bir string ile bu endpoint'e erişilebilmesi demekti.
+    if (!(await isValidAdminRequest(request))) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
         { status: 401 }

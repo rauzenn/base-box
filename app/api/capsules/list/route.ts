@@ -25,24 +25,25 @@ export async function GET(request: Request) {
   
   try {
     const { searchParams } = new URL(request.url);
-    const fid = searchParams.get('fid');
+    const rawAddress = searchParams.get('address');
+    const address = rawAddress ? rawAddress.toLowerCase() : null;
 
     console.log('═══════════════════════════════════════');
     console.log('📋 [List API] Request received');
-    console.log('📋 [List API] FID:', fid);
+    console.log('📋 [List API] Address:', address);
     console.log('📋 [List API] Time:', new Date().toISOString());
     console.log('═══════════════════════════════════════');
 
-    if (!fid) {
-      console.error('❌ [List API] Missing FID parameter');
+    if (!address) {
+      console.error('❌ [List API] Missing address parameter');
       return NextResponse.json(
-        { success: false, message: 'FID required' },
+        { success: false, message: 'Wallet address required' },
         { status: 400, headers: corsHeaders }
       );
     }
 
     // Step 1: Get capsule IDs from user's set
-    const userSetKey = `user:${fid}:capsules`;
+    const userSetKey = `user:${address}:capsules`;
     console.log('📋 [List API] Fetching from:', userSetKey);
     
     const capsuleIds = await kv.smembers(userSetKey);
@@ -98,12 +99,27 @@ export async function GET(request: Request) {
         return dateB - dateA; // Newest first
       });
 
+    // GÜVENLİK: unlock tarihi henüz gelmemiş capsule'ların gerçek içeriğini
+    // (mesaj, görsel) hiç göndermiyoruz. Öncesinde tam içerik client'a
+    // gidiyordu ve "kilitli mi" kararı sadece tarayıcıda veriliyordu — yani
+    // biri network sekmesinden ya da cihaz saatini ileri alarak içeriği
+    // erken görebiliyordu. Şimdi bu kontrol sunucu saatiyle (Date.now())
+    // yapılıyor, client'a hiç güvenilmiyor.
+    const now = Date.now();
+    const safeCapsules = validCapsules.map((c: any) => {
+      const isUnlocked = c.revealed || new Date(c.unlockDate).getTime() <= now;
+      if (isUnlocked) return c;
+
+      const { message, image, imageType, ...lockedFields } = c;
+      return { ...lockedFields, locked: true };
+    });
+
     console.log('📋 [List API] Valid capsules:', validCapsules.length);
     console.log('📋 [List API] Request completed in', Date.now() - startTime, 'ms');
     console.log('═══════════════════════════════════════');
 
     return NextResponse.json(
-      { success: true, capsules: validCapsules },
+      { success: true, capsules: safeCapsules },
       { headers: corsHeaders }
     );
 

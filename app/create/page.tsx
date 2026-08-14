@@ -2,9 +2,9 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X } from 'lucide-react';
-import { AchievementToast, useAchievements } from '@/components/ui/achievement-toast';
-import { useFarcaster } from '@/hooks/use-farcaster';
+import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X, Wallet as WalletIcon } from 'lucide-react';
+import { useWallet } from '@/hooks/usewallet';
+import { WalletModal } from '@/components/wallet/WalletModal';
 import BottomNav from '@/components/ui/bottom-nav';
 
 const durations = [
@@ -19,8 +19,7 @@ const durations = [
 
 export default function CreatePage() {
   const router = useRouter();
-  const { fid, isLoading } = useFarcaster();
-  const { newAchievement, checkAchievements, clearAchievement } = useAchievements(fid || 0);
+  const { address, isConnected, signMessage } = useWallet();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
@@ -29,34 +28,26 @@ export default function CreatePage() {
   const [image, setImage] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#000814] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white font-bold">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!fid) {
+  if (!isConnected || !address) {
     return (
       <div className="min-h-screen bg-[#000814] flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">⚠️</span>
+          <div className="w-16 h-16 bg-[#0052FF]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <WalletIcon className="w-8 h-8 text-[#0052FF]" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">Connection Error</h2>
-          <p className="text-gray-400 mb-6">Unable to connect. Please use from Warpcast.</p>
+          <h2 className="text-2xl font-black text-white mb-2">Connect Your Wallet</h2>
+          <p className="text-gray-400 mb-6">Capsule'lar cüzdan adresine bağlı olarak saklanır. Devam etmek için cüzdanını bağla.</p>
           <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition"
+            onClick={() => setShowWalletModal(true)}
+            className="px-6 py-3 bg-gradient-to-r from-[#0052FF] to-cyan-500 text-white rounded-xl font-bold hover:from-blue-600 hover:to-cyan-600 transition"
           >
-            Retry
+            Connect Wallet
           </button>
         </div>
+        {showWalletModal && <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />}
+        <BottomNav />
       </div>
     );
   }
@@ -88,26 +79,33 @@ export default function CreatePage() {
   };
 
   const handleCreateCapsule = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !address) return;
 
     setCreating(true);
     setErrorMessage(null); // Clear previous errors
     
     try {
       console.log('🎨 [Create] Starting capsule creation...');
-      console.log('🎨 [Create] FID:', fid);
+      console.log('🎨 [Create] Address:', address);
       console.log('🎨 [Create] Duration:', selectedDuration.days, 'days');
 
-      // ✅ FIXED: duration parametresini ekliyoruz
+      // Cüzdanın gerçek sahibi olduğumuzu kanıtlamak için mesajı imzalıyoruz.
+      // Backend bu imzayı doğrulamadan capsule'ı kaydetmiyor.
+      const timestamp = Date.now();
+      const authMessage = `Base Box: verify wallet\naddress: ${address.toLowerCase()}\ntimestamp: ${timestamp}`;
+      const signature = await signMessage(authMessage);
+
       const response = await fetch('/api/capsules/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fid,
+          address,
+          signature,
+          timestamp,
           message: message.trim(),
-          duration: selectedDuration.days, // ✅ EKLENDI!
+          duration: selectedDuration.days,
           image,
-          imageType: image ? 'image/jpeg' : undefined, // ✅ EKLENDI!
+          imageType: image ? 'image/jpeg' : undefined,
         }),
       });
 
@@ -122,9 +120,6 @@ export default function CreatePage() {
 
       if (data.success) {
         console.log('✅ [Create] Capsule created successfully!');
-        
-        // Check achievements
-        await checkAchievements();
 
         // Show success and redirect
         setTimeout(() => {
@@ -136,7 +131,11 @@ export default function CreatePage() {
     } catch (error: any) {
       console.error('❌ [Create] Error:', error);
       // ✅ alert() yerine state kullanıyoruz
-      setErrorMessage(error.message || 'Failed to create capsule. Please try again.');
+      if (error.message?.includes('User rejected') || error.code === 4001) {
+        setErrorMessage('İmza reddedildi. Capsule oluşturmak için cüzdanınla imzalaman gerekiyor.');
+      } else {
+        setErrorMessage(error.message || 'Failed to create capsule. Please try again.');
+      }
     } finally {
       setCreating(false);
     }
@@ -155,8 +154,6 @@ export default function CreatePage() {
           backgroundSize: '50px 50px'
         }}
       />
-
-      <AchievementToast achievement={newAchievement} onClose={clearAchievement} />
 
       {/* ✅ Error Toast (alert() yerine) */}
       {errorMessage && (

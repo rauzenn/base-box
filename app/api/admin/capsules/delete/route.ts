@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
+import { isValidAdminRequest } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 
 interface Capsule {
   id: string;
-  fid: number;
+  address: string;
   message: string;
   createdAt: string;
   unlockDate: string;
@@ -14,10 +15,9 @@ interface Capsule {
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) {
+    // Eskiden herhangi bir boş olmayan Authorization header'ı yeterliydi.
+    // Artık token gerçekten admin login'den geçmiş mi diye KV'den doğrulanıyor.
+    if (!(await isValidAdminRequest(request))) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
         { status: 401 }
@@ -43,7 +43,8 @@ export async function POST(request: Request) {
     }
 
     await kv.del(`capsule:${capsuleId}`);
-    await kv.srem(`user:${capsule.fid}:capsules`, capsuleId);
+    // Capsule'lar artık cüzdan adresine göre indeksleniyor (eskiden fid'e göreydi).
+    await kv.srem(`user:${capsule.address}:capsules`, capsuleId);
 
     console.log(`✅ Deleted: ${capsuleId}`);
 

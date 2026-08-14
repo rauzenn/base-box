@@ -6,7 +6,7 @@ import { Package, Lock, Unlock, Users, RefreshCw, LogOut, Trash2, Eye } from 'lu
 
 interface Capsule {
   id: string;
-  fid: number;
+  address: string;
   message: string;
   createdAt: string;
   unlockDate: string;
@@ -66,12 +66,15 @@ export default function AdminDashboard() {
       console.log('📦 Response data:', data);
 
       if (data.success) {
-        setCapsules(data.capsules || []);
-        setStats(data.stats || {
-          totalCapsules: 0,
-          lockedCapsules: 0,
-          revealedCapsules: 0,
-          totalUsers: 0
+        const loadedCapsules: Capsule[] = data.capsules || [];
+        setCapsules(loadedCapsules);
+        // /api/admin/capsules "stats" alanı döndürmüyor, bu yüzden kartlar
+        // hep 0 gösteriyordu. Elimizdeki capsule listesinden hesaplıyoruz.
+        setStats({
+          totalCapsules: loadedCapsules.length,
+          lockedCapsules: loadedCapsules.filter(c => !c.revealed).length,
+          revealedCapsules: loadedCapsules.filter(c => c.revealed).length,
+          totalUsers: new Set(loadedCapsules.map(c => c.address)).size,
         });
         console.log('✅ Data loaded successfully');
       } else {
@@ -160,7 +163,7 @@ export default function AdminDashboard() {
       const query = searchQuery.toLowerCase();
       return (
         capsule.id.toLowerCase().includes(query) ||
-        capsule.fid.toString().includes(query) ||
+        capsule.address.toLowerCase().includes(query) ||
         capsule.message.toLowerCase().includes(query)
       );
     }
@@ -266,7 +269,7 @@ export default function AdminDashboard() {
 
           <input
             type="text"
-            placeholder="Search by FID, ID, or message..."
+            placeholder="Search by address, ID, or message..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 px-6 py-3 bg-[#1A1F2E] border-2 border-[#0052FF]/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#0052FF]"
@@ -280,7 +283,7 @@ export default function AdminDashboard() {
           <thead className="bg-[#0052FF]/10">
             <tr>
               <th className="px-6 py-4 text-left font-bold">ID</th>
-              <th className="px-6 py-4 text-left font-bold">FID</th>
+              <th className="px-6 py-4 text-left font-bold">Address</th>
               <th className="px-6 py-4 text-left font-bold">Message</th>
               <th className="px-6 py-4 text-left font-bold">Unlock Date</th>
               <th className="px-6 py-4 text-left font-bold">Status</th>
@@ -304,7 +307,9 @@ export default function AdminDashboard() {
               filteredCapsules.map((capsule) => (
                 <tr key={capsule.id} className="border-t border-gray-800 hover:bg-[#0052FF]/5">
                   <td className="px-6 py-4 font-mono text-sm">{capsule.id}</td>
-                  <td className="px-6 py-4 font-bold">{capsule.fid}</td>
+                  <td className="px-6 py-4 font-mono text-sm" title={capsule.address}>
+                    {capsule.address ? `${capsule.address.slice(0, 6)}...${capsule.address.slice(-4)}` : '—'}
+                  </td>
                   <td className="px-6 py-4 max-w-md truncate">{capsule.message}</td>
                   <td className="px-6 py-4 text-sm">
                     {new Date(capsule.unlockDate).toLocaleString()}

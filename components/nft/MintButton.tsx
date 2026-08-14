@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Loader2, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { Sparkles, Loader2, CheckCircle, XCircle, ExternalLink, Clock } from 'lucide-react';
 import { useMintNFT } from '@/hooks/useMintNFT';
 import { MintSuccessModal } from './MintSuccessModal';
 
@@ -15,9 +15,29 @@ interface MintButtonProps {
   };
 }
 
+// NFT mint altyapısı henüz production'a hazır değil:
+// - Kontrat (contracts/BaseBoxNFT.sol) deploy edildiğine dair kanıt yok
+//   (hardhat config dosya adı yanlış yazılmıştı, deploy script'i çalışmamış olabilir)
+// - useMintNFT wagmi'nin useAccount/useWriteContract'ına dayanıyor, ama
+//   uygulamanın gerçek cüzdan bağlantısı (usewallet.tsx) wagmi'den bağımsız
+//   çalışıyor ve wagmi config'inde hiç connector tanımlı değil.
+// Bu haliyle buton her zaman "cüzdan bağlı değil" hatasıyla başarısız olurdu.
+// Gerçek kontrat deploy edilip yukarıdakiler düzeltilene kadar "Yakında"
+// olarak gösteriyoruz — kullanıcıya çalışmayan bir özellik sunmuyoruz.
+const MINTING_LIVE = false;
+
 export function MintButton({ capsuleId, capsuleData }: MintButtonProps) {
   const { mint, isMinting, error, txHash, isSuccess } = useMintNFT();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  if (!MINTING_LIVE) {
+    return (
+      <div className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-[#0A0E14]/60 border-2 border-gray-700 rounded-2xl text-gray-500 font-bold cursor-not-allowed">
+        <Clock className="w-5 h-5" />
+        <span>NFT Mint — Yakında</span>
+      </div>
+    );
+  }
 
   // Show success modal when transaction is confirmed
   useEffect(() => {

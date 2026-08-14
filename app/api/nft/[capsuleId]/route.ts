@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const capsuleData = capsule as {
       id: string;
-      fid: number;
+      address: string;
       message: string;
       image?: string;
       createdAt: string;
@@ -103,14 +103,14 @@ export async function GET(request: NextRequest) {
           value: 'Base',
         },
         {
-          trait_type: 'Creator FID',
-          value: capsuleData.fid.toString(),
+          trait_type: 'Creator Address',
+          value: capsuleData.address,
         },
       ],
       properties: {
         category: 'time-capsule',
         creator: {
-          fid: capsuleData.fid,
+          address: capsuleData.address,
         },
       },
     };

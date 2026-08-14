@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Unlock, Calendar, Download, Image as ImageIcon, Sparkles, Share2, Clock, Wallet as WalletIcon, Settings } from 'lucide-react';
 import { useRipple, createSparkles } from '@/components/animations/effects';
 import BottomNav from '@/components/ui/bottom-nav';
-import { useFarcaster } from '@/hooks/use-farcaster';
 import { useWallet } from '@/hooks/usewallet';
 import { WalletModal } from '@/components/wallet/WalletModal';
 import { SettingsModal } from '@/components/settings/settingsmodal';
@@ -12,17 +11,18 @@ import { MintButton } from '@/components/nft/MintButton';
 
 interface Capsule {
   id: string;
-  fid: number;
+  address: string;
   message: string;
   image?: string;
   imageType?: string;
   createdAt: string;
   unlockDate: string;
   revealed: boolean;
+  locked?: boolean;
 }
 
 export default function RevealsPage() {
-  const { fid, isLoading: farcasterLoading } = useFarcaster(); // ✅ FIXED: Use real FID
+  // Capsule'lar artık cüzdan adresine göre saklanıyor (fid değil).
   const createRipple = useRipple();
   const { address, isConnected } = useWallet();
   
@@ -32,29 +32,25 @@ export default function RevealsPage() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // ✅ FIXED: FID dependency added
   useEffect(() => {
-    if (!fid) {
-      console.log('🔓 [Reveals] Waiting for FID...');
+    if (!address) {
+      setLoading(false);
       return;
     }
-    
-    console.log('🔓 [Reveals] FID available:', fid);
+
     fetchRevealedCapsules();
-  }, [fid]); // ← FID DEPENDENCY ADDED!
+  }, [address]);
 
   const fetchRevealedCapsules = async () => {
-    // ✅ FIXED: Check FID before fetching
-    if (!fid) {
-      console.error('🔓 [Reveals] Cannot fetch without FID');
+    if (!address) {
       setLoading(false);
       return;
     }
 
     try {
-      console.log('🔓 [Reveals] Fetching revealed capsules for FID:', fid);
+      console.log('🔓 [Reveals] Fetching revealed capsules for address:', address);
       
-      const response = await fetch(`/api/capsules/list?fid=${fid}`, {
+      const response = await fetch(`/api/capsules/list?address=${address}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -109,8 +105,7 @@ export default function RevealsPage() {
     document.body.removeChild(link);
   };
 
-  // ✅ IMPROVED: Combined loading state
-  if (farcasterLoading || loading) {
+  if (loading && address) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
         <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
@@ -122,9 +117,7 @@ export default function RevealsPage() {
         <div className="relative z-10 flex items-center justify-center h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
-            <p className="text-gray-400 font-bold">
-              {farcasterLoading ? 'Connecting...' : 'Loading reveals...'}
-            </p>
+            <p className="text-gray-400 font-bold">Loading reveals...</p>
           </div>
         </div>
         <BottomNav />
@@ -132,8 +125,7 @@ export default function RevealsPage() {
     );
   }
 
-  // ✅ ADDED: No FID error state
-  if (!fid) {
+  if (!isConnected || !address) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
         <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
@@ -144,19 +136,20 @@ export default function RevealsPage() {
         
         <div className="relative z-10 flex items-center justify-center h-screen px-6">
           <div className="text-center max-w-md">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">⚠️</span>
+            <div className="w-16 h-16 bg-[#0052FF]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <WalletIcon className="w-8 h-8 text-[#0052FF]" />
             </div>
-            <h2 className="text-2xl font-black text-white mb-2">Connection Error</h2>
-            <p className="text-gray-400 mb-6">Unable to connect. Please use from Warpcast.</p>
+            <h2 className="text-2xl font-black text-white mb-2">Connect Your Wallet</h2>
+            <p className="text-gray-400 mb-6">Açılan capsule'larını görmek için cüzdanını bağla.</p>
             <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition"
+              onClick={() => setIsWalletModalOpen(true)}
+              className="px-6 py-3 bg-gradient-to-r from-[#0052FF] to-cyan-500 text-white rounded-xl font-bold hover:from-blue-600 hover:to-cyan-600 transition"
             >
-              Retry
+              Connect Wallet
             </button>
           </div>
         </div>
+        <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} />
         <BottomNav />
       </div>
     );

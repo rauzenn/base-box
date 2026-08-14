@@ -69,8 +69,8 @@ export function WalletDropdown() {
               </div>
             </div>
 
-            {/* User Info (if Farcaster context available) */}
-            {context?.user && (
+            {/* User Info (yalnızca gerçek bir Farcaster kullanıcı adı varsa gösterilir) */}
+            {context?.user?.username && (
               <div className="space-y-2 mb-4">
                 <div>
                   <p className="text-xs text-gray-500 font-medium">Display Name</p>

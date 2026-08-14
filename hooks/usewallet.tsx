@@ -182,10 +182,26 @@ export function useWallet() {
     }
   }, [connectFarcasterWallet, connectExternalWallet]);
 
+  // Bağlı cüzdanla bir mesaj imzalar. Capsule oluşturma gibi işlemlerde
+  // "bu adres gerçekten senin" kanıtı olarak backend'e gönderilir.
+  const signMessage = useCallback(async (message: string): Promise<string> => {
+    if (!wallet.provider || !wallet.address) {
+      throw new Error('Wallet not connected');
+    }
+
+    const signature = await wallet.provider.request({
+      method: 'personal_sign',
+      params: [message, wallet.address],
+    });
+
+    return signature as string;
+  }, [wallet.provider, wallet.address]);
+
   return {
     ...wallet,
     connectFarcasterWallet,
     connectExternalWallet,
     disconnect,
+    signMessage,
   };
 }

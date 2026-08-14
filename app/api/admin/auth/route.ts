@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
+import { createAdminSession } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
     
     if (password === ADMIN_PASSWORD) {
       const sessionToken = generateSessionToken();
+      // Token'ı KV'de gerçekten saklıyoruz, böylece diğer admin route'ları
+      // bunu doğrulayabiliyor. Önceden token hiçbir yerde tutulmuyordu.
+      await createAdminSession(sessionToken);
       
       console.log('✅ Admin login successful');
       

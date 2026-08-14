@@ -4,51 +4,54 @@ import { useState, useEffect } from 'react';
 import { Lock, Clock, Calendar, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { useRipple, createSparkles } from '@/components/animations/effects';
 import BottomNav from '@/components/ui/bottom-nav';
-import { useFarcaster } from '@/hooks/use-farcaster';
+import { useWallet } from '@/hooks/usewallet';
+import { WalletModal } from '@/components/wallet/WalletModal';
+import { Wallet as WalletIcon } from 'lucide-react';
 
 interface Capsule {
   id: string;
-  fid: number;
+  address: string;
   message: string;
   image?: string;
   imageType?: string;
   createdAt: string;
   unlockDate: string;
   revealed: boolean;
+  locked?: boolean;
 }
 
 type FilterType = 'all' | 'locked';
 
 export default function CapsulesPage() {
-  const { fid, isLoading: farcasterLoading } = useFarcaster();
+  // Capsule'lar artık Farcaster fid'ine değil, bağlı cüzdan adresine göre
+  // saklanıyor (bkz. capsules/create ve capsules/list route'ları).
+  const { address, isConnected } = useWallet();
   const createRipple = useRipple();
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
-  // ✅ FIXED: FID dependency added + only fetch when FID is available
   useEffect(() => {
-    if (!fid) {
-      console.log('📦 [Capsules] Waiting for FID...');
+    if (!address) {
+      setLoading(false);
       return;
     }
-    
-    console.log('📦 [Capsules] FID available:', fid);
+
     fetchCapsules();
-  }, [fid]); // ← FID DEPENDENCY ADDED!
+  }, [address]);
 
   const fetchCapsules = async () => {
-    if (!fid) {
-      console.error('📦 [Capsules] Cannot fetch without FID');
+    if (!address) {
       setLoading(false);
       return;
     }
 
     try {
-      console.log('📦 [Capsules] Fetching capsules for FID:', fid);
+      console.log('📦 [Capsules] Fetching capsules for address:', address);
       
-      const response = await fetch(`/api/capsules/list?fid=${fid}`, {
+      const response = await fetch(`/api/capsules/list?address=${address}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -98,8 +101,7 @@ export default function CapsulesPage() {
     return capsule.revealed || new Date(capsule.unlockDate) <= new Date();
   };
 
-  // ✅ IMPROVED: Combined loading state
-  if (farcasterLoading || (loading && !capsules.length)) {
+  if (loading && !capsules.length && address) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
         <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
@@ -111,9 +113,7 @@ export default function CapsulesPage() {
         <div className="relative z-10 flex items-center justify-center h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
-            <p className="text-gray-400 font-bold">
-              {farcasterLoading ? 'Connecting...' : 'Loading capsules...'}
-            </p>
+            <p className="text-gray-400 font-bold">Loading capsules...</p>
           </div>
         </div>
         <BottomNav />
@@ -121,8 +121,7 @@ export default function CapsulesPage() {
     );
   }
 
-  // ✅ ADDED: No FID error state
-  if (!fid) {
+  if (!isConnected || !address) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
         <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
@@ -133,19 +132,20 @@ export default function CapsulesPage() {
         
         <div className="relative z-10 flex items-center justify-center h-screen px-6">
           <div className="text-center max-w-md">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">⚠️</span>
+            <div className="w-16 h-16 bg-[#0052FF]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <WalletIcon className="w-8 h-8 text-[#0052FF]" />
             </div>
-            <h2 className="text-2xl font-black text-white mb-2">Connection Error</h2>
-            <p className="text-gray-400 mb-6">Unable to connect. Please use from Warpcast.</p>
+            <h2 className="text-2xl font-black text-white mb-2">Connect Your Wallet</h2>
+            <p className="text-gray-400 mb-6">Capsule'larını görmek için cüzdanını bağla.</p>
             <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition"
+              onClick={() => setShowWalletModal(true)}
+              className="px-6 py-3 bg-gradient-to-r from-[#0052FF] to-cyan-500 text-white rounded-xl font-bold hover:from-blue-600 hover:to-cyan-600 transition"
             >
-              Retry
+              Connect Wallet
             </button>
           </div>
         </div>
+        {showWalletModal && <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />}
         <BottomNav />
       </div>
     );

@@ -5,7 +5,6 @@ import { Lock, Unlock, Clock, Sparkles, TrendingUp, Zap, Gift, Rocket, Shield, U
 import { useRipple, createSparkles, createConfetti } from '@/components/animations/effects';
 import BottomNav from '@/components/ui/bottom-nav';
 import Link from 'next/link';
-import { useFarcaster } from '@/hooks/use-farcaster';
 import { useWallet } from '@/hooks/usewallet';
 import { WalletModal } from '@/components/wallet/WalletModal';
 import { WalletDropdown } from '@/components/wallet/WalletDropdown';
@@ -18,7 +17,6 @@ interface Stats {
 }
 
 export default function HomePage() {
-  const fid = 3;
   const createRipple = useRipple();
   const heroRef = useRef<HTMLDivElement>(null);
   const { address, isConnected } = useWallet();
@@ -35,8 +33,6 @@ export default function HomePage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
-    fetchStats();
-    
     // Mouse tracking for parallax
     const handleMouseMove = (e: MouseEvent) => {
       if (heroRef.current) {
@@ -52,9 +48,22 @@ export default function HomePage() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // Eskiden herkes için sabit "fid = 3" kullanıcısının verisi çekiliyordu,
+  // yani her ziyaretçi aynı (kendine ait olmayan) sayıları görüyordu.
+  // Artık bağlı cüzdanın gerçek verisi çekiliyor; cüzdan bağlı değilse
+  // istatistik çekilmiyor (0 olarak kalıyor).
+  useEffect(() => {
+    if (!address) {
+      setLoading(false);
+      return;
+    }
+    fetchStats();
+  }, [address]);
+
   const fetchStats = async () => {
+    if (!address) return;
     try {
-      const response = await fetch(`/api/capsules/list?fid=${fid}`);
+      const response = await fetch(`/api/capsules/list?address=${address}`);
       const data = await response.json();
 
       if (data.success && data.capsules) {

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
+import { verifyWalletOwnership } from '@/lib/wallet-auth';
 
 export const runtime = 'nodejs';
 
 interface Capsule {
   id: string;
-  fid: number;
+  address: string;
   message: string;
   image?: string;
   imageType?: string;
@@ -18,21 +19,27 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     console.log('🔥 [API Create] Received request');
-    console.log('🔥 [API Create] FID:', body.fid);
     console.log('🔥 [API Create] Duration:', body.duration, 'days');
     console.log('🔥 [API Create] Has image:', !!body.image);
 
-    const { fid, message, duration, image, imageType } = body;
+    const { address, signature, timestamp, message, duration, image, imageType } = body;
 
-    // Validation
-    if (!fid) {
-      console.error('❌ [API Create] Missing: fid');
+    // GÜVENLİK: capsule'ın gerçekten bu cüzdanın sahibi tarafından
+    // oluşturulduğunu doğruluyoruz. Öncesinde client'ın gönderdiği "fid"
+    // hiç doğrulanmadan kullanılıyordu — herkes başka birinin kimliğiyle
+    // capsule oluşturabiliyordu.
+    const ownership = await verifyWalletOwnership({ address, signature, timestamp });
+    if (!ownership.valid) {
+      console.error('❌ [API Create] Wallet ownership check failed:', ownership.reason);
       return NextResponse.json(
-        { success: false, message: 'Missing required field: fid' },
-        { status: 400 }
+        { success: false, message: ownership.reason || 'Wallet verification failed' },
+        { status: 401 }
       );
     }
 
+    const walletAddress = (address as string).toLowerCase();
+
+    // Validation
     if (!message || message.trim() === '') {
       console.error('❌ [API Create] Missing: message');
       return NextResponse.json(
@@ -86,8 +93,8 @@ export async function POST(request: Request) {
     console.log('✅ [API Create] Validation passed');
 
     // Generate unique capsule ID
-    const timestamp = Date.now();
-    const capsuleId = `${fid}-${timestamp}`;
+    const timestampNow = Date.now();
+    const capsuleId = `${walletAddress}-${timestampNow}`;
 
     console.log('🆔 [API Create] Generated capsule ID:', capsuleId);
 
@@ -101,7 +108,7 @@ export async function POST(request: Request) {
     // Create capsule object
     const capsule: Capsule = {
       id: capsuleId,
-      fid: parseInt(fid),
+      address: walletAddress,
       message: message.trim(),
       createdAt,
       unlockDate,
@@ -128,8 +135,8 @@ export async function POST(request: Request) {
 
     // Add capsule ID to user's set
     try {
-      await kv.sadd(`user:${fid}:capsules`, capsuleId);
-      console.log(`✅ [API Create] Added to user:${fid}:capsules set`);
+      await kv.sadd(`user:${walletAddress}:capsules`, capsuleId);
+      console.log(`✅ [API Create] Added to user:${walletAddress}:capsules set`);
     } catch (error) {
       console.error('❌ [API Create] KV sadd failed:', error);
       // Try to clean up the capsule we just created
@@ -138,8 +145,8 @@ export async function POST(request: Request) {
     }
 
     // Verify it was added
-    const userCapsules = await kv.smembers(`user:${fid}:capsules`);
-    console.log(`🔍 [API Create] Verification: user:${fid}:capsules now has ${userCapsules?.length || 0} capsules`);
+    const userCapsules = await kv.smembers(`user:${walletAddress}:capsules`);
+    console.log(`🔍 [API Create] Verification: user:${walletAddress}:capsules now has ${userCapsules?.length || 0} capsules`);
 
     console.log('✅ [API Create] Capsule created successfully!');
 
@@ -147,7 +154,7 @@ export async function POST(request: Request) {
       success: true,
       capsule: {
         id: capsule.id,
-        fid: capsule.fid,
+        address: capsule.address,
         message: capsule.message,
         createdAt: capsule.createdAt,
         unlockDate: capsule.unlockDate,

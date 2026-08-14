@@ -51,7 +51,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         {/* ⭐ BASE APP VERIFICATION - CRITICAL FOR LAUNCH ⭐ */}
-        <meta name="base:app_id" content="6a7ba17c547e633806294141" />
+        <meta name="base:app_id" content="697d2228e3ab76ae45abd7be" />
         <meta name="base:theme" content="dark" />
         <meta name="base:image" content="https://basebox.vercel.app/icon.png" />
         

@@ -50,7 +50,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     console.log('✅ [Theme] Theme saved:', newTheme);
   };
 
-
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}

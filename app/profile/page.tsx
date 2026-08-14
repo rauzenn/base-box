@@ -1,12 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Calendar, Lock, Unlock, Trophy, TrendingUp, Sparkles, Award, Gift, Wallet as WalletIcon, Copy, ExternalLink, Settings } from 'lucide-react';
-import { useRipple, createSparkles } from '@/components/animations/effects';
-import { AchievementCard } from '@/components/ui/achievement-card';
-import { BadgeShowcase } from '@/components/ui/badge-showcase';
+import { User, Calendar, Lock, Unlock, Trophy, TrendingUp, Wallet as WalletIcon, Copy, Settings } from 'lucide-react';
+import { useRipple } from '@/components/animations/effects';
 import BottomNav from '@/components/ui/bottom-nav';
-import { useFarcaster } from '@/hooks/use-farcaster';
 import { useWallet } from '@/hooks/usewallet';
 import { WalletModal } from '@/components/wallet/WalletModal';
 import { WalletDropdown } from '@/components/wallet/WalletDropdown';
@@ -18,21 +15,8 @@ interface Stats {
   longestDuration: number;
 }
 
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  reward: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  unlocked: boolean;
-  claimed: boolean;
-  progress: number;
-  max: number;
-}
-
 export default function ProfilePage() {
-  const { fid, isLoading: farcasterLoading } = useFarcaster();
+  // İstatistikler artık cüzdan adresine göre hesaplanıyor (fid değil).
   const { address, isConnected, balance } = useWallet();
   const createRipple = useRipple();
   const [stats, setStats] = useState<Stats>({
@@ -40,106 +24,54 @@ export default function ProfilePage() {
     revealedCapsules: 0,
     longestDuration: 0,
   });
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [unclaimedCount, setUnclaimedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  // ✅ FIXED: FID dependency added
   useEffect(() => {
-    if (!fid) {
-      console.log('👤 [Profile] Waiting for FID...');
+    if (!address) {
+      setLoading(false);
       return;
     }
-    
-    console.log('👤 [Profile] FID available:', fid);
-    fetchData();
-  }, [fid]); // ← FID DEPENDENCY ADDED!
+    fetchStats();
+  }, [address]);
 
-  const fetchData = async () => {
-    // ✅ FIXED: Check FID before fetching
-    if (!fid) {
-      console.error('👤 [Profile] Cannot fetch without FID');
+  const fetchStats = async () => {
+    if (!address) {
       setLoading(false);
       return;
     }
 
     try {
-      console.log('👤 [Profile] Fetching achievements for FID:', fid);
-      
-      const achievementResponse = await fetch(`/api/achievements?fid=${fid}`, {
+      const response = await fetch(`/api/capsules/list?address=${address}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store', // ✅ ADDED: Disable cache
-      });
-
-      console.log('👤 [Profile] Response status:', achievementResponse.status);
-      
-      const achievementData = await achievementResponse.json();
-      console.log('👤 [Profile] Response data:', achievementData);
-
-      if (achievementData.success) {
-        console.log('👤 [Profile] Stats:', achievementData.stats);
-        console.log('👤 [Profile] Achievements:', achievementData.achievements.length);
-        console.log('👤 [Profile] Unclaimed:', achievementData.unclaimedCount);
-        
-        setAchievements(achievementData.achievements);
-        setStats(achievementData.stats);
-        setUnclaimedCount(achievementData.unclaimedCount || 0);
-      } else {
-        console.error('👤 [Profile] API error:', achievementData.error);
-      }
-    } catch (error) {
-      console.error('👤 [Profile] Failed to fetch profile data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClaimAchievement = async (achievementId: string) => {
-    if (!fid) return;
-
-    try {
-      console.log('🎁 [Profile] Claiming achievement:', achievementId);
-      
-      const response = await fetch('/api/achievements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          fid, 
-          action: 'claim',
-          achievementId 
-        })
+        cache: 'no-store',
       });
 
       const data = await response.json();
-      console.log('🎁 [Profile] Claim response:', data);
-      
-      if (data.success) {
-        console.log('🎁 [Profile] Claimed successfully:', achievementId);
-        // Refresh achievements
-        await fetchData();
-      } else {
-        console.error('🎁 [Profile] Claim failed:', data.error);
+
+      if (data.success && data.capsules) {
+        const totalCapsules = data.capsules.length;
+        const revealedCapsules = data.capsules.filter(
+          (c: any) => c.revealed || new Date(c.unlockDate) <= new Date()
+        ).length;
+
+        let longestDuration = 0;
+        for (const c of data.capsules) {
+          const created = new Date(c.createdAt);
+          const unlock = new Date(c.unlockDate);
+          const durationDays = Math.floor((unlock.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+          if (durationDays > longestDuration) longestDuration = durationDays;
+        }
+
+        setStats({ totalCapsules, revealedCapsules, longestDuration });
       }
     } catch (error) {
-      console.error('🎁 [Profile] Failed to claim achievement:', error);
+      console.error('Failed to fetch profile stats:', error);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const getAchievementLevel = () => {
-    const unlockedCount = achievements.filter(a => a.unlocked).length;
-    const total = achievements.length;
-    
-    if (unlockedCount >= 8) return { level: 'Legend', progress: 100, next: 'Max Level!' };
-    if (unlockedCount >= 6) return { level: 'Master', progress: 75, next: '2 more to Legend' };
-    if (unlockedCount >= 4) return { level: 'Expert', progress: 50, next: '2 more to Master' };
-    if (unlockedCount >= 2) return { level: 'Novice', progress: 25, next: '2 more to Expert' };
-    return { level: 'Newcomer', progress: 0, next: '2 to unlock Novice' };
   };
 
   const copyAddress = () => {
@@ -159,8 +91,7 @@ export default function ProfilePage() {
     return num.toFixed(4);
   };
 
-  // ✅ IMPROVED: Combined loading state
-  if (farcasterLoading || loading) {
+  if (loading && address) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
         <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
@@ -168,13 +99,11 @@ export default function ProfilePage() {
           backgroundImage: `linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)`,
           backgroundSize: '50px 50px'
         }} />
-        
+
         <div className="relative z-10 flex items-center justify-center h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
-            <p className="text-gray-400 font-bold">
-              {farcasterLoading ? 'Connecting...' : 'Loading profile...'}
-            </p>
+            <p className="text-gray-400 font-bold">Loading profile...</p>
           </div>
         </div>
         <BottomNav />
@@ -182,8 +111,7 @@ export default function ProfilePage() {
     );
   }
 
-  // ✅ ADDED: No FID error state
-  if (!fid) {
+  if (!isConnected || !address) {
     return (
       <div className="min-h-screen bg-[#000814] pb-24">
         <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
@@ -191,35 +119,35 @@ export default function ProfilePage() {
           backgroundImage: `linear-gradient(to right, rgba(0, 82, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 82, 255, 0.15) 1px, transparent 1px)`,
           backgroundSize: '50px 50px'
         }} />
-        
+
         <div className="relative z-10 flex items-center justify-center h-screen px-6">
           <div className="text-center max-w-md">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">⚠️</span>
+            <div className="w-16 h-16 bg-[#0052FF]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <WalletIcon className="w-8 h-8 text-[#0052FF]" />
             </div>
-            <h2 className="text-2xl font-black text-white mb-2">Connection Error</h2>
-            <p className="text-gray-400 mb-6">Unable to load profile. Please use from Warpcast.</p>
+            <h2 className="text-2xl font-black text-white mb-2">Connect Your Wallet</h2>
+            <p className="text-gray-400 mb-6">Profilini görmek için cüzdanını bağla.</p>
             <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition"
+              onClick={() => setShowWalletModal(true)}
+              className="px-6 py-3 bg-gradient-to-r from-[#0052FF] to-cyan-500 text-white rounded-xl font-bold hover:from-blue-600 hover:to-cyan-600 transition"
             >
-              Retry
+              Connect Wallet
             </button>
           </div>
         </div>
+        {showWalletModal && <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />}
         <BottomNav />
       </div>
     );
   }
 
-  const achievementLevel = getAchievementLevel();
   const lockedCount = stats.totalCapsules - stats.revealedCapsules;
 
   return (
     <div className="min-h-screen bg-[#000814] pb-24">
       {/* Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-b from-[#000814] via-[#001428] to-[#000814]" />
-      <div 
+      <div
         className="fixed inset-0 opacity-20"
         style={{
           backgroundImage: `
@@ -241,9 +169,6 @@ export default function ProfilePage() {
               <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-1">
                 Profile
               </h1>
-              <p className="text-gray-400 text-sm font-medium">
-                FID: {fid}
-              </p>
             </div>
           </div>
 
@@ -286,7 +211,7 @@ export default function ProfilePage() {
                 </div>
                 <WalletDropdown />
               </div>
-              
+
               {balance && (
                 <div className="pt-3 border-t border-gray-800">
                   <div className="flex items-center justify-between">
@@ -340,7 +265,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Longest Lock */}
-        <div className="mb-6 fade-in-up" style={{ animationDelay: '0.15s' }}>
+        <div className="fade-in-up" style={{ animationDelay: '0.15s' }}>
           <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-2 border-purple-500/20 rounded-2xl p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -358,84 +283,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-
-        {/* Achievement Progress */}
-        <div className="mb-6 fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <div className="bg-[#0A0E14]/60 backdrop-blur-md border-2 border-[#0052FF]/20 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Award className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-white font-black text-lg">{achievementLevel.level}</p>
-                  <p className="text-xs text-gray-400 font-medium">{achievementLevel.next}</p>
-                </div>
-              </div>
-              {unclaimedCount > 0 && (
-                <div className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full animate-pulse">
-                  <p className="text-xs text-white font-black">{unclaimedCount} New!</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="w-full h-3 bg-[#1A1F2E] rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full transition-all duration-1000"
-                style={{ width: `${achievementLevel.progress}%` }}
-              />
-            </div>
-            <div className="flex justify-between mt-2">
-              <p className="text-xs text-gray-500 font-bold">
-                {achievements.filter(a => a.unlocked).length}/{achievements.length}
-              </p>
-              <p className="text-xs text-gray-500 font-bold">{achievementLevel.progress}%</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Achievements Grid */}
-        <div className="mb-6 fade-in-up" style={{ animationDelay: '0.25s' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-black text-white flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-yellow-400" />
-              Achievements
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {achievements.map((achievement, index) => (
-              <AchievementCard
-                key={achievement.id}
-                id={achievement.id}
-                title={achievement.title}
-                description={achievement.description}
-                icon={achievement.icon}
-                reward={achievement.reward}
-                rarity={achievement.rarity}
-                unlocked={achievement.unlocked}
-                claimed={achievement.claimed}
-                progress={achievement.progress}
-                max={achievement.max}
-                onClaim={handleClaimAchievement}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Badge Showcase */}
-        {achievements.filter(a => a.unlocked).length > 0 && (
-          <div className="fade-in-up" style={{ animationDelay: '0.5s' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-black text-white flex items-center gap-2">
-                <Gift className="w-6 h-6 text-cyan-400" />
-                Badge Collection
-              </h2>
-            </div>
-            <BadgeShowcase badges={achievements.filter(a => a.unlocked)} />
-          </div>
-        )}
       </div>
 
       {/* Modals */}
