@@ -15,6 +15,24 @@ const nextConfig = {
       },
     ];
   },
+  webpack: (config) => {
+    // wagmi'nin baseAccount connector'ı, biz hiç kullanmadığımız bir
+    // özelliği (Base Pay / ödeme "charge" arayüzü) kendi içinde
+    // barındırıyor. O özellik @coinbase/cdp-sdk'yi, o da x402 ödeme
+    // protokolü paketlerini (@x402/evm vb.) import ediyor — bunlar ayrıca
+    // kurulması gereken, opsiyonel paketler ve biz ödeme özelliğini hiç
+    // çağırmıyoruz (sadece cüzdan bağlama/connect için baseAccount
+    // kullanıyoruz). Bu paketleri projeye eklemek yerine, hiçbir zaman
+    // çalıştırılmayan bu import zincirini webpack'e boş modül olarak
+    // işaretliyoruz ki build bu opsiyonel/kullanılmayan kod yüzünden
+    // patlamasın.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@coinbase/cdp-sdk': false,
+      '@x402/evm': false,
+    };
+    return config;
+  },
 };
 
 module.exports = nextConfig;
