@@ -2,6 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { createSiweMessage } from 'viem/siwe';
+import { base } from 'viem/chains';
 import { Lock, Clock, Sparkles, ArrowRight, ArrowLeft, Check, Image as ImageIcon, X, Wallet as WalletIcon } from 'lucide-react';
 import { useWallet } from '@/hooks/usewallet';
 import { WalletModal } from '@/components/wallet/WalletModal';
@@ -89,19 +91,35 @@ export default function CreatePage() {
       console.log('🎨 [Create] Address:', address);
       console.log('🎨 [Create] Duration:', selectedDuration.days, 'days');
 
-      // Cüzdanın gerçek sahibi olduğumuzu kanıtlamak için mesajı imzalıyoruz.
-      // Backend bu imzayı doğrulamadan capsule'ı kaydetmiyor.
-      const timestamp = Date.now();
-      const authMessage = `Base Box: verify wallet\naddress: ${address.toLowerCase()}\ntimestamp: ${timestamp}`;
-      const signature = await signMessage(authMessage);
+      // Cüzdanın gerçek sahibi olduğumuzu EIP-4361 (Sign-In with Ethereum)
+      // standardına göre kanıtlıyoruz: önce sunucudan tek kullanımlık bir
+      // nonce alıyoruz, sonra bunu içeren standart bir SIWE mesajını
+      // imzalıyoruz. Backend bu imzayı ve nonce'u doğrulamadan capsule'ı
+      // kaydetmiyor (bkz. lib/wallet-auth.ts).
+      const nonceRes = await fetch('/api/auth/nonce');
+      if (!nonceRes.ok) {
+        throw new Error('Could not start sign-in, please try again.');
+      }
+      const { nonce } = await nonceRes.json();
+
+      const siweMessage = createSiweMessage({
+        address: address as `0x${string}`,
+        chainId: base.id,
+        domain: window.location.host,
+        nonce,
+        statement: 'Sign in to create a Base Box time capsule.',
+        uri: window.location.origin,
+        version: '1',
+      });
+
+      const siweSignature = await signMessage(siweMessage);
 
       const response = await fetch('/api/capsules/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          address,
-          signature,
-          timestamp,
+          siweMessage,
+          siweSignature,
           message: message.trim(),
           duration: selectedDuration.days,
           image,

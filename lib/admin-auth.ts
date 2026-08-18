@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { kv } from '@/lib/redis';
 
 // Admin oturum token'ları burada, gerçekten KV'de tutulur ve doğrulanır.
 // Önceki kod sadece "token 10+ karakter mi" diye bakıyordu — bu, admin

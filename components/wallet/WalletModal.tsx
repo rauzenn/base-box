@@ -10,40 +10,22 @@ interface WalletModalProps {
 }
 
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
-  const { connectFarcasterWallet, connectExternalWallet, isConnecting } = useWallet();
+  const { connect, isConnecting, hasInjected } = useWallet();
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<'baseAccount' | 'injected' | null>(null);
 
-  const handleFarcasterConnect = async () => {
+  const handleConnect = async (preferred: 'baseAccount' | 'injected') => {
     try {
       setError(null);
-      console.log('👆 [Modal] User clicked Farcaster wallet');
-      
-      await connectFarcasterWallet();
-      localStorage.setItem('lastWalletType', 'farcaster');
-      
-      console.log('✅ [Modal] Farcaster wallet connected, closing modal');
+      setPending(preferred);
+      await connect(preferred);
       onClose();
-    } catch (error) {
-      const errorMessage = (error as Error).message || 'Failed to connect Farcaster wallet';
-      console.error('❌ [Modal] Farcaster connection failed:', errorMessage);
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to connect wallet';
+      console.error('❌ [Modal] Connection failed:', errorMessage);
       setError(errorMessage);
-    }
-  };
-
-  const handleExternalConnect = async () => {
-    try {
-      setError(null);
-      console.log('👆 [Modal] User clicked external wallet');
-      
-      await connectExternalWallet();
-      localStorage.setItem('lastWalletType', 'external');
-      
-      console.log('✅ [Modal] External wallet connected, closing modal');
-      onClose();
-    } catch (error) {
-      const errorMessage = (error as Error).message || 'Failed to connect external wallet';
-      console.error('❌ [Modal] External connection failed:', errorMessage);
-      setError(errorMessage);
+    } finally {
+      setPending(null);
     }
   };
 
@@ -67,7 +49,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         </button>
 
         {/* Icon */}
-        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-3xl flex items-center justify-center">
+        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-[#0052FF] to-cyan-500 rounded-3xl flex items-center justify-center">
           <Wallet className="w-10 h-10 text-white" />
         </div>
 
@@ -76,7 +58,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           Connect Your Wallet
         </h2>
         <p className="text-gray-400 text-center mb-8">
-          Choose a wallet to connect and access Base Box
+          Choose how you want to connect to Base Box
         </p>
 
         {/* Error Message */}
@@ -87,7 +69,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
               <p className="text-sm font-bold text-red-400 mb-1">Connection Failed</p>
               <p className="text-xs text-red-300">{error}</p>
             </div>
-            <button 
+            <button
               onClick={() => setError(null)}
               className="text-red-400 hover:text-red-300 transition-colors"
             >
@@ -96,29 +78,23 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           </div>
         )}
 
-        {/* Wallet Options */}
-        <div className="space-y-4">
-          {/* Farcaster Wallet */}
+        <div className="space-y-3">
+          {/* Base Account — primary, works everywhere (Base App + normal browser via passkey) */}
           <button
-            onClick={handleFarcasterConnect}
+            onClick={() => handleConnect('baseAccount')}
             disabled={isConnecting}
-            className="w-full flex items-center gap-4 p-5 bg-[#1A1F2E] hover:bg-[#0052FF]/20 border-2 border-[#0052FF]/30 hover:border-[#0052FF] rounded-2xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center gap-4 p-5 bg-gradient-to-r from-[#0052FF]/20 to-cyan-500/10 hover:from-[#0052FF]/30 hover:to-cyan-500/20 border-2 border-[#0052FF] rounded-2xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <div className="w-14 h-14 bg-[#0052FF]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <svg width="32" height="32" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="1000" height="1000" fill="#0052FF"/>
-                <path d="M257.778 155.556H742.222V844.444H671.111V528.889H670.414C662.554 441.677 589.258 373.333 500 373.333C410.742 373.333 337.446 441.677 329.586 528.889H328.889V844.444H257.778V155.556Z" fill="white"/>
-                <path d="M128.889 253.333L157.778 351.111H182.222V746.667C169.949 746.667 160 756.616 160 768.889V795.556H155.556C143.283 795.556 133.333 805.505 133.333 817.778V844.444H382.222V817.778C382.222 805.505 372.273 795.556 360 795.556H355.556V768.889C355.556 756.616 345.606 746.667 333.333 746.667H306.667V253.333H128.889Z" fill="white"/>
-                <path d="M675.556 746.667V253.333H853.333L882.222 351.111H906.667V746.667C918.94 746.667 928.889 756.616 928.889 768.889V795.556H933.333C945.606 795.556 955.556 805.505 955.556 817.778V844.444H706.667V817.778C706.667 805.505 716.616 795.556 728.889 795.556H733.333V768.889C733.333 756.616 723.384 746.667 711.111 746.667H675.556Z" fill="white"/>
-              </svg>
+            <div className="w-14 h-14 bg-[#0052FF] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Wallet className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1 text-left">
-              <h3 className="text-lg font-black text-white">Farcaster Wallet</h3>
+              <h3 className="text-lg font-black text-white">Sign in with Base</h3>
               <p className="text-sm text-gray-400">
-                {isConnecting ? 'Connecting...' : 'Connect with Farcaster'}
+                {pending === 'baseAccount' ? 'Connecting...' : 'Base App or Base Account'}
               </p>
             </div>
-            {isConnecting ? (
+            {pending === 'baseAccount' ? (
               <div className="w-8 h-8">
                 <div className="w-full h-full border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
               </div>
@@ -127,27 +103,31 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
             )}
           </button>
 
-          {/* External Wallet (MetaMask/BaseApp) */}
+          {/* Injected wallet — MetaMask, Coinbase Wallet extension, etc. */}
           <button
-            onClick={handleExternalConnect}
+            onClick={() => handleConnect('injected')}
             disabled={isConnecting}
-            className="w-full flex items-center gap-4 p-5 bg-[#1A1F2E] hover:bg-[#0052FF]/20 border-2 border-[#0052FF]/30 hover:border-[#0052FF] rounded-2xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center gap-4 p-5 bg-[#1A1F2E] hover:bg-[#0052FF]/10 border-2 border-gray-700 hover:border-[#0052FF]/50 rounded-2xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <div className="w-14 h-14 bg-[#0052FF]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Wallet className="w-8 h-8 text-[#0052FF]" />
+            <div className="w-14 h-14 bg-[#0052FF]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Wallet className="w-8 h-8 text-gray-400" />
             </div>
             <div className="flex-1 text-left">
-              <h3 className="text-lg font-black text-white">External Wallet</h3>
+              <h3 className="text-lg font-black text-white">Other Wallet</h3>
               <p className="text-sm text-gray-400">
-                {isConnecting ? 'Connecting...' : 'MetaMask, Coinbase, etc.'}
+                {pending === 'injected'
+                  ? 'Connecting...'
+                  : hasInjected
+                  ? 'MetaMask, Coinbase Wallet extension...'
+                  : 'No browser wallet detected'}
               </p>
             </div>
-            {isConnecting ? (
+            {pending === 'injected' ? (
               <div className="w-8 h-8">
-                <div className="w-full h-full border-4 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
+                <div className="w-full h-full border-4 border-gray-600 border-t-gray-300 rounded-full animate-spin" />
               </div>
             ) : (
-              <div className="w-8 h-8 rounded-full border-2 border-[#0052FF]/30 group-hover:border-[#0052FF] transition-colors" />
+              <div className="w-8 h-8 rounded-full border-2 border-gray-700 group-hover:border-[#0052FF]/50 transition-colors" />
             )}
           </button>
         </div>

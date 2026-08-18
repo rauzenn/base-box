@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { kv } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -53,8 +53,9 @@ export async function GET(request: Request) {
     if (!capsuleIds || capsuleIds.length === 0) {
       console.log('📋 [List API] No capsules found - returning empty array');
       console.log('📋 [List API] Request completed in', Date.now() - startTime, 'ms');
+      const totalUsers = await kv.scard('all-users').catch(() => 0);
       return NextResponse.json(
-        { success: true, capsules: [] },
+        { success: true, capsules: [], totalUsers },
         { headers: corsHeaders }
       );
     }
@@ -118,8 +119,13 @@ export async function GET(request: Request) {
     console.log('📋 [List API] Request completed in', Date.now() - startTime, 'ms');
     console.log('═══════════════════════════════════════');
 
+    // "all-users" seti her başarılı capsule oluşturmada güncelleniyor
+    // (bkz. capsules/create/route.ts) — bu yüzden buradaki sayı gerçek,
+    // önceden hardcoded "1" idi.
+    const totalUsers = await kv.scard('all-users').catch(() => 0);
+
     return NextResponse.json(
-      { success: true, capsules: safeCapsules },
+      { success: true, capsules: safeCapsules, totalUsers },
       { headers: corsHeaders }
     );
 

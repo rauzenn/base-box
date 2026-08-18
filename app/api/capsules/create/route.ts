@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { kv } from '@/lib/redis';
 import { verifyWalletOwnership } from '@/lib/wallet-auth';
 
 export const runtime = 'nodejs';
@@ -22,14 +22,15 @@ export async function POST(request: Request) {
     console.log('🔥 [API Create] Duration:', body.duration, 'days');
     console.log('🔥 [API Create] Has image:', !!body.image);
 
-    const { address, signature, timestamp, message, duration, image, imageType } = body;
+    const { siweMessage, siweSignature, message, duration, image, imageType } = body;
 
     // GÜVENLİK: capsule'ın gerçekten bu cüzdanın sahibi tarafından
-    // oluşturulduğunu doğruluyoruz. Öncesinde client'ın gönderdiği "fid"
-    // hiç doğrulanmadan kullanılıyordu — herkes başka birinin kimliğiyle
-    // capsule oluşturabiliyordu.
-    const ownership = await verifyWalletOwnership({ address, signature, timestamp });
-    if (!ownership.valid) {
+    // oluşturulduğunu EIP-4361 (SIWE) ile doğruluyoruz. Adres, client'ın
+    // ayrıca gönderdiği bir alandan değil, doğrulanmış SIWE mesajının
+    // içinden çıkarılıyor — client'ın "ben buyum" dediği adrese değil,
+    // imzanın kanıtladığı adrese güveniyoruz.
+    const ownership = await verifyWalletOwnership({ siweMessage, siweSignature });
+    if (!ownership.valid || !ownership.address) {
       console.error('❌ [API Create] Wallet ownership check failed:', ownership.reason);
       return NextResponse.json(
         { success: false, message: ownership.reason || 'Wallet verification failed' },
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const walletAddress = (address as string).toLowerCase();
+    const walletAddress = ownership.address;
 
     // Validation
     if (!message || message.trim() === '') {
@@ -136,6 +137,9 @@ export async function POST(request: Request) {
     // Add capsule ID to user's set
     try {
       await kv.sadd(`user:${walletAddress}:capsules`, capsuleId);
+      // Gerçek "toplam kullanıcı" sayısı için (bkz. /api/capsules/list) —
+      // aynı adres birden çok capsule oluştursa bile set'te bir kez sayılır.
+      await kv.sadd('all-users', walletAddress);
       console.log(`✅ [API Create] Added to user:${walletAddress}:capsules set`);
     } catch (error) {
       console.error('❌ [API Create] KV sadd failed:', error);

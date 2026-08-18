@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { kv } from '@/lib/redis';
 import { isValidAdminRequest } from '@/lib/admin-auth';
 
 // CRITICAL: Mark as dynamic to use request.headers

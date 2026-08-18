@@ -73,7 +73,7 @@ export default function HomePage() {
         setStats({ 
           totalCapsules: total,
           revealedToday: revealed,
-          totalUsers: 1 // Mock data for now
+          totalUsers: data.totalUsers ?? 0
         });
       }
     } catch (error) {

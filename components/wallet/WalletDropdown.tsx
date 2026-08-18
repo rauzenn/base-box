@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { Wallet, Copy, LogOut, ChevronDown, Check } from 'lucide-react';
 import { useWallet } from '@/hooks/usewallet';
-import { useFarcaster } from '@/hooks/use-farcaster';
 
 export function WalletDropdown() {
-  const { address, balance, disconnect } = useWallet();
-  const { context } = useFarcaster();
+  // Kullanıcı kimliği artık tamamen cüzdan adresine dayanıyor — Farcaster
+  // profili (varsa) sadece dekoratif bir eklentiydi, kaldırıldı. Bkz.
+  // Farcaster kimlik denetimi raporu.
+  const { address, balance, chainName, disconnect } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -69,20 +70,13 @@ export function WalletDropdown() {
               </div>
             </div>
 
-            {/* User Info (yalnızca gerçek bir Farcaster kullanıcı adı varsa gösterilir) */}
-            {context?.user?.username && (
-              <div className="space-y-2 mb-4">
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Display Name</p>
-                  <p className="text-white font-bold">{context.user.displayName || 'Unnamed'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Username</p>
-                  <p className="text-blue-400 font-bold">@{context.user.username || 'unknown'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Farcaster ID</p>
-                  <p className="text-white font-bold">{context.user.fid}</p>
+            {/* Network */}
+            {chainName && (
+              <div className="mb-4">
+                <p className="text-xs text-gray-500 font-medium mb-1">Network</p>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#0052FF]/10 border border-[#0052FF]/30 rounded-lg">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                  <span className="text-white text-xs font-bold">{chainName}</span>
                 </div>
               </div>
             )}
