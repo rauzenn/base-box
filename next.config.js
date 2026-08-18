@@ -22,15 +22,30 @@ const nextConfig = {
     // protokolü paketlerini (@x402/evm vb.) import ediyor — bunlar ayrıca
     // kurulması gereken, opsiyonel paketler ve biz ödeme özelliğini hiç
     // çağırmıyoruz (sadece cüzdan bağlama/connect için baseAccount
-    // kullanıyoruz). Bu paketleri projeye eklemek yerine, hiçbir zaman
-    // çalıştırılmayan bu import zincirini webpack'e boş modül olarak
-    // işaretliyoruz ki build bu opsiyonel/kullanılmayan kod yüzünden
-    // patlamasın.
+    // kullanıyoruz).
+    //
+    // @react-native-async-storage/async-storage ve pino-pretty ise
+    // MetaMask SDK / WalletConnect'in React Native ortamı ve Node.js'te
+    // "pretty" log basmak için kullandığı, tarayıcıda hiç gerekmeyen
+    // opsiyonel bağımlılıklar — wagmi/RainbowKit ekosisteminde bilinen,
+    // standart bir build sorunu, resmi çözümü de tam olarak bu.
+    //
+    // Hiçbiri projede gerçekten çalıştırılmayan kod yollarında, o yüzden
+    // webpack'e "bunları bulamazsan boş modül say / bundle'a hiç dahil
+    // etme" diyoruz; gerçek işlevselliği etkilemiyor.
     config.resolve.alias = {
       ...config.resolve.alias,
       '@coinbase/cdp-sdk': false,
       '@x402/evm': false,
+      '@react-native-async-storage/async-storage': false,
     };
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+    config.externals = [...(config.externals || []), 'pino-pretty', 'lokijs', 'encoding'];
     return config;
   },
 };

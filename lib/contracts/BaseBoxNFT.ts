@@ -1,8 +1,12 @@
 // Contract address (will be updated after deployment)
 export const NFT_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS || '';
 
-// Chain ID
-export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453');
+// Chain ID — wagmi config'i (lib/wagmi-config.ts) sadece Base mainnet (8453)
+// ve Base Sepolia (84532) zincirlerini tanıyor, switchChain() de tipini bu
+// literal union'a göre bekliyor. parseInt() düz "number" döndürdüğü için
+// build sırasında tip hatası veriyordu — burada güvenli şekilde daraltıyoruz.
+const parsedChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453');
+export const CHAIN_ID: 8453 | 84532 = parsedChainId === 84532 ? 84532 : 8453;
 
 // Contract ABI - Only the functions we need
 export const NFT_CONTRACT_ABI = [
