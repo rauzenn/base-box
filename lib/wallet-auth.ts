@@ -3,34 +3,44 @@ import { base } from 'viem/chains';
 import { parseSiweMessage, verifySiweMessage } from 'viem/siwe';
 import { kv } from '@/lib/redis';
 
-// Capsule oluşturma isteklerinin gerçekten o cüzdan adresinin sahibi
-// tarafından gönderildiğini EIP-4361 (Sign-In with Ethereum) standardına
-// göre kanıtlıyoruz. Öncesinde endpoint client'ın gönderdiği "fid" (sonra
-// "address") değerine doğrulama yapmadan güveniyordu — herkes başkasının
-// adına capsule oluşturabilirdi.
+// Capsule oluşturma isteklerinin gerçekten o cüzdan adresinin sahibi tarafından
+// gönderildiğini EIP-4361 (Sign-In with Ethereum) standardına göre doğruluyoruz.
 //
-// SIWE burada bize üç şeyi garanti eder:
-//   1. İmza gerçekten bu adresin cüzdanı tarafından üretilmiş (kriptografik kanıt)
-//   2. Mesaj gerçekten bu siteye (domain) ait — başka bir sitede imzalanmış
-//      bir mesaj burada geçerli sayılmaz (phishing/replay koruması)
-//   3. Nonce sunucu tarafından üretilmiş ve daha önce hiç kullanılmamış —
-//      çalınan bir imza ikinci kez kullanılamaz (bkz. /api/auth/nonce)
+// SIWE bize şunları garanti eder:
+//   1. İmza gerçekten bu adresin cüzdanı tarafından üretilmiş.
+//   2. Mesaj bu uygulamanın domain'i için imzalanmış.
+//   3. Nonce sunucu tarafından üretilmiş ve tek kullanımlık.
 const publicClient = createPublicClient({
   chain: base,
   transport: http(),
 });
 
 function getExpectedDomain(): string {
-  // Vercel bu değişkeni otomatik sağlar (örn. "base-box.vercel.app").
-  // Yerelde çalışırken NEXT_PUBLIC_APP_URL veya localhost'a düşer.
-  if (process.env.VERCEL_URL) return process.env.VERCEL_URL;
+  // Production'da VERCEL_URL, ziyaret edilen deployment'ın benzersiz URL'sidir
+  // (ör. base-box-abc123.vercel.app). Kullanıcı ise stable production domain'i
+  // (ör. basebox.vercel.app) üzerinden gelebilir. Bu ikisini karşılaştırmak
+  // SIWE'de gereksiz bir domain mismatch üretir.
+  //
+  // Öncelik sırası:
+  // 1. Açıkça tanımlanmış uygulama URL'si
+  // 2. Vercel'in stable production domain'i
+  // 3. Preview/deployment URL'si
+  // 4. Local development
   if (process.env.NEXT_PUBLIC_APP_URL) {
     try {
       return new URL(process.env.NEXT_PUBLIC_APP_URL).host;
     } catch {
-      // yoksay, aşağıdaki fallback'e düş
+      // aşağıdaki fallback'lere devam et
     }
   }
+
+  if (process.env.VERCEL_ENV === 'production' && process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  }
+
+  if (process.env.VERCEL_URL) return process.env.VERCEL_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return process.env.VERCEL_PROJECT_PRODUCTION_URL;
+
   return 'localhost:3000';
 }
 
@@ -54,13 +64,13 @@ export async function verifyWalletOwnership({
 
   const { address, nonce, domain, expirationTime } = parsed;
 
-  if (!address || !nonce) {
+  if (!address || !nonce || !domain) {
     return { valid: false, reason: 'Incomplete SIWE message' };
   }
 
   // Domain kontrolü: mesaj gerçekten bizim sitemiz için mi imzalanmış?
   const expectedDomain = getExpectedDomain();
-  if (domain && domain !== expectedDomain) {
+  if (domain !== expectedDomain) {
     console.error(`❌ [wallet-auth] Domain mismatch: got "${domain}", expected "${expectedDomain}"`);
     return { valid: false, reason: 'Domain mismatch' };
   }
@@ -69,11 +79,7 @@ export async function verifyWalletOwnership({
     return { valid: false, reason: 'Signature expired, please try again' };
   }
 
-  // Nonce tek kullanımlık: DEL atomik olduğu için silinen anahtar sayısı 1
-  // değilse ya nonce hiç üretilmemiş ya da daha önce (örn. bir önceki
-  // istekte, ya da çift-tıklamada) zaten tüketilmiş demektir. Bu aynı
-  // zamanda "aynı butona iki kez basınca duplicate capsule oluşmasın"
-  // gereksinimini de doğal olarak karşılıyor — ikinci istek burada reddedilir.
+  // Nonce tek kullanımlık: daha önce tüketilmiş veya hiç üretilmemiş nonce reddedilir.
   const deletedCount = await kv.del(`siwe:nonce:${nonce}`);
   if (deletedCount !== 1) {
     return { valid: false, reason: 'Nonce invalid, expired, or already used' };
